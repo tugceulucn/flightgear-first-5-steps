@@ -1,14 +1,180 @@
 import streamlit as st
 import pandas as pd
+import xml.etree.ElementTree as ET
+from math import pow
 
-#MAIN 
+version = 1.0
+
+def make_table(name, data):
+    # 'function' elementi oluşturuluyor
+    func = ET.Element('function', name=name)
+    
+    # 'table' elementi oluşturuluyor
+    table = ET.SubElement(func, 'table')
+
+    # 'independentVar' elementleri oluşturuluyor
+    row = ET.SubElement(table, 'independentVar', lookup='row')
+    row.text = 'velocities/mach'
+
+    column = ET.SubElement(table, 'independentVar', lookup='column')
+    column.text = 'atmosphere/density-altitude'
+
+    # 'tableData' elementi oluşturuluyor
+    table_data = ET.SubElement(table, 'tableData')
+    table_data.text = data
+
+    return func
+
+def indent(elem, level=0):
+    i = "\n" + level*"    "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "    "
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+        for subelem in elem:
+            indent(subelem, level+1)
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+    else:
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
+    return elem
+
+
+def make_piston(power):
+    # Piston motor XML elementi oluşturma
+    engine = ET.Element('piston_engine')
+    ET.SubElement(engine, 'power').text = str(power)
+    return engine
+
+def make_turbine(power, augmented, injected):
+    # Türbin motor XML elementi oluşturma
+    engine = ET.Element('turbine_engine')
+    ET.SubElement(engine, 'power').text = str(power)
+    ET.SubElement(engine, 'augmented').text = str(augmented).lower()
+    ET.SubElement(engine, 'injected').text = str(injected).lower()
+    return engine
+
+def make_turboprop(power, units):
+    # Turboprop motor XML elementi oluşturma
+    engine = ET.Element('turboprop_engine')
+    ET.SubElement(engine, 'power').text = str(power)
+    ET.SubElement(engine, 'units').text = str(units)
+    ET.SubElement(engine, 'bypassratio').text = str(0.0)
+    ET.SubElement(engine, 'tsfc').text = str(0.55)
+    ET.SubElement(engine, 'bleed').text = str(0.03)
+    ET.SubElement(engine, 'idlen1').text = str(30.0)
+    ET.SubElement(engine, 'idlen2').text = str(60.0)
+    ET.SubElement(engine, 'maxn1').text = str(100.0)
+    ET.SubElement(engine, 'maxn2').text= str(100.0)
+    ET.SubElement(engine, 'augmented').text = str(0)
+    ET.SubElement(engine, 'injected').text = str(0)
+
+    idlethrust = (
+        "IdleThrust\n"
+        "-10000       0   10000   20000   30000   40000   50000\n"
+        "0.0  0.0430  0.0488  0.0528  0.0694  0.0899  0.1183  0.0\n"
+        "0.2  0.0500  0.0501  0.0335  0.0544  0.0797  0.1049  0.0\n"
+        "0.4  0.0040  0.0047  0.0020  0.0272  0.0595  0.0891  0.0\n"
+        "0.6  0.0     0.0     0.0     0.0276  0.0718  0.0430  0.0\n"
+        "0.8  0.0     0.0     0.0     0.0     0.0174  0.0086  0.0\n"
+        "1.0  0.0     0.0     0.0     0.0     0.0     0.0     0.0\n"
+    )
+
+    milthrust = (
+       " MilThrust\n"
+        "    -10000       0   10000   20000   30000   40000   50000"
+        "0.0  1.1260  1.0000  0.7400  0.5340  0.3720  0.2410  0.0\n"
+        "0.2  1.1000  0.9340  0.6970  0.5060  0.3550  0.2310  0.0\n"
+        "0.4  1.0000  0.6410  0.6120  0.4060  0.3570  0.2330  0.0\n"
+        "0.6  0.4430  0.3510  0.2710  0.2020  0.1780  0.1020  0.0\n"
+        "0.8  0.0240  0.0200  0.0160  0.0130  0.0110  0.0100  0.0\n"
+        "1.0  0.0     0.0     0.0     0.0     0.0     0.0     0.0\n"
+    )
+    
+    # Table elementini oluşturma ve veriyi ekleme
+    table_elem = make_table('IdleThrust', idlethrust)
+    table_elem_2 = make_table('MilThrust', milthrust)
+    engine.append(table_elem)
+    engine.append(table_elem_2)
+
+    indent(engine)
+
+    return engine
+
+
+def make_rocket():
+    # Roket motor XML elementi oluşturma
+    engine = ET.Element('rocket_engine')
+    ET.SubElement(engine, 'shr').text = str(1.23)
+    ET.SubElement(engine, 'max_pc').text = str(86556)
+    ET.SubElement(engine, 'variance').text = str(0.1)
+    ET.SubElement(engine, 'prop_eff').text = str(0.67)
+    ET.SubElement(engine, 'maxthrottle').text = str(1.0)
+    ET.SubElement(engine, 'minthrottle').text = str(0.4)
+    ET.SubElement(engine, 'slfuelflowmax').text = str(91.5)
+    ET.SubElement(engine, 'sloxiflowmax').text = str(105.2)
+
+    indent(engine)
+
+    return engine
+
+
+def save_xml(root, filename):
+    # Save the XML file
+    tree = ET.ElementTree(root)
+    tree.write(filename, xml_declaration=True, encoding='utf-8')
+
+    # Verify the file exists and is well-formed before parsing
+    try:
+        tree = ET.parse(filename)
+        root = tree.getroot()
+    except ET.ParseError as e:
+        st.error(f"Error parsing XML file: {e}")
+        return
+
+def generate_engine(engine_name, engine_type, power_or_thrust, power_unit, afterburning, water_injection):
+    # Power unit conversion
+    if power_unit == 'kw':
+        power_or_thrust *= 1.341
+    if power_unit == 'newtons':
+        power_or_thrust *= 0.2248
+
+    # Motor türüne göre XML elementini oluşturma
+    if engine_type == 'piston':
+        comments += 'piston'
+        engine = make_piston(power_or_thrust)
+    elif engine_type == 'turbine':
+        engine = make_turbine(power_or_thrust, afterburning, water_injection)
+    elif engine_type == 'turboprop':
+        engine = make_turboprop(power_or_thrust, power_unit)
+    elif engine_type == 'rocket':
+        engine = make_rocket()
+
+    # Motor ismi ekleme
+    engine.set('name', engine_name)
+
+    # Yorumlar ekleme
+    comments = f"\n  File: {engine_name}.xml\n  Author: Aero-Matic v {version}\n\n  Inputs\n    name: {engine_type}\n    type: {engine_type}\n    power: {power_or_thrust}\n    augmented: {afterburning}\n    injected: {water_injection}\n\n"
+
+    # XML yapısını oluşturma
+    root = ET.Element("root")
+    root.append(ET.Comment(comments))
+    root.append(engine)
+    
+    return root
+
+
+    
+#MAIN FUNCTION
 def main_texts():
     st.set_page_config(layout="wide")
     c, cc = st.columns([0.1, 0.9])
     with c:
         logo = st.image("images/logo.png", width=100)
     with cc:
-        st.title("First 5 Steps to Add Your Own Aircraft to Flightgear")
+        st.title("First 7 Steps to Add Your Own Aircraft to Flightgear")
 
     #st.subheader("What is ",divider=True)
     st.write("FlightGear is a free and open source flight simulation software. Started in 1997, this project provides a platform to which anyone with an interest in flight simulations can contribute. FlightGear can simulate a wide variety of airplanes, airports and flight conditions, so it is used by both flight enthusiasts and professionals for training and entertainment purposes. During the installation phase, you can download the software from the official website and install it on your computer. On the start screen, you can adjust settings such as aircraft selection, airport selection and flight parameters. The flight simulation starts in a realistic cockpit environment and you can manage the aircraft using control systems from real airplanes. FlightGear is extensible, so you can download and add new aircraft models developed by the community. To import aircraft, simply place the downloaded aircraft files into FlightGear's **Aircraft** folder. FlightGear is characterized by realistic flight dynamics, modular structure, extensive scenery options and multiplayer mode. These features allow users to improve their flying skills, experience different airplanes, and create their own simulation content.")
@@ -30,10 +196,7 @@ def main_texts():
 
     st.info('**Auxiliary Resources**: The most important sites **[Flightgear is the official site](https://www.flightgear.org/)** to help you where you get stuck. You can also examine the **[JSBSim file](https://jsbsim.sourceforge.net/JSBSimReferenceManual.pdf)**. You can also find the **[Aeromatic site](https://jsbsim.sourceforge.net/aeromatic2.html)** from which we are inspired here!', icon="ℹ️")
 
-
-    
-
-
+#STEPS TO ADD A AIRCRAFT
 def steps():
     #STEP 1
     st.subheader("Step 1: The Engine Configuration", divider=True)
@@ -58,12 +221,11 @@ def steps():
 
             # Formu oluştur
             if st.button("Generate"):
-                st.write("Engine Name:", engine_name)
-                st.write("Engine Type:", engine_type)
-                st.write(f"Engine Power or Thrust: {power_or_thrust} {power_unit}")
-                st.write("Augmentation (afterburning) Installed?:", afterburning)
-                st.write("Water Injection Installed?:", water_injection)
-                st.write("You are now ready to have Aeromatic generate your file. Aeromatic will create a file called `engine.php`, which is your engine configuration file. You will need to save this file with a filename of the form `engine_name.xml`.")
+                #engine_name,  engine_type, power_or_thrust,  power_unit,  water_injection
+                # XML dosyasını oluşturma ve kaydetme
+                engine_xml = generate_engine(engine_name, engine_type, power_or_thrust, power_unit, afterburning, water_injection)
+                save_xml(engine_xml, f"{engine_name}.xml")
+                #st.write("You are now ready to have Aeromatic generate your file. Aeromatic will create a file called `engine.php`, which is your engine configuration file. You will need to save this file with a filename of the form `engine_name.xml`.")
 
     #STEP 2 
     st.subheader("Step 2: The Prop configuration (if applicable)...", divider=True)
@@ -464,17 +626,9 @@ def steps():
 
                     if st.button("Parameters Ready!"):
                         st.write(axis, axis2, axis3, axis4, axis5, axis6, axis7)
-    
-    # STEP 8
-    st.subheader("Step 8", divider=True)
-    st.write("This is inside the container")
-    with st.expander("**STEP :eight:**"):
-        with st.container():
-            st.subheader("Step 8", divider=True)
-            st.write("This is inside the container")
 
+#FOOTER FUNCTION
 def footer():
-    
     footer_col1, footer_col2 = st.columns(2)
     with footer_col1:
         st.write("You've managed to transfer your airplane to FlightGear for the first stage. Now you are on your own! You can add realism to your simulation by adding sound effects and visual customization with various aircraft liveries. The electronics and cockpit enhance the functionality of your aircraft, while thumbnails and previews enhance the visual presentation. GUI information messages and checklists will improve the user experience, while a separate menu will make your simulation more accessible. You can use FlightGear's original site for these steps. Good luck!")
@@ -483,7 +637,6 @@ def footer():
         st.image("images/turkish_flag.jpg", width=350)
     with footer_col2:
         data = pd.DataFrame({'latitude': [41.015137],'longitude': [28.979530]})
-
         st.map(data, zoom=10, color='#0044ff')
         
 
@@ -497,3 +650,5 @@ if __name__ == "__main__":
     
     with st.container(border=True):   
         footer()
+
+    
