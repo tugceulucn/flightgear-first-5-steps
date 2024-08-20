@@ -41,7 +41,6 @@ def indent(elem, level=0):
             elem.tail = i
     return elem
 
-
 def make_piston(power):
     # Piston motor XML elementi oluşturma
     engine = ET.Element('piston_engine')
@@ -103,7 +102,6 @@ def make_turboprop(power, units):
 
     return engine
 
-
 def make_rocket():
     # Roket motor XML elementi oluşturma
     engine = ET.Element('rocket_engine')
@@ -119,7 +117,6 @@ def make_rocket():
     indent(engine)
 
     return engine
-
 
 def save_xml(root, filename):
     # Save the XML file
@@ -165,8 +162,79 @@ def generate_engine(engine_name, engine_type, power_or_thrust, power_unit, after
     
     return root
 
+def aircraft_set(description, pitch_offset_deg, x_offset_m, y_offset_m, z_offset_m, fdm, systems, cockpit, model_rating, tags,fuel_tanks, help_lines, help_title, previews, flight_model,model_path, audible, panelVisibility, author, aircraft_version, sound_path, aero_file, long_description, fuel_Fraction):
+    set = ET.Element('sim')
+    ET.SubElement(set, 'description').text = description
+    ET.SubElement(set, 'long-description').text = long_description
+    ET.SubElement(set, 'author').text = author
+    ET.SubElement(set, 'aircraft-version').text = aircraft_version
+    ET.SubElement(set, 'flight-model').text = flight_model
+    ET.SubElement(set, 'aero').text = aero_file
+    ET.SubElement(set, 'fuel-fraction').text = fuel_Fraction
 
+    sound = ET.SubElement(set, "sound")
+    audible_element = ET.SubElement(sound, "audible")
+    audible_element.text = "true" if audible else "false"
     
+    path_element = ET.SubElement(sound, "path")
+    path_element.text = sound_path
+
+    panel = ET.SubElement(set, "panel")
+    ET.SubElement(panel, 'visibility').text = panelVisibility
+
+    model = ET.SubElement(set, "model")
+    ET.SubElement(model, 'path').text = model_path
+
+    previews = ET.SubElement(set, "previews")
+    prev = ET.SubElement(set, "preview")
+    ET.SubElement(prev, 'type').text = 'exterior'
+    ET.SubElement(prev, 'path').text = 'Previews/turkey.png'
+    ET.SubElement(prev, 'splash').text = 'true'
+    
+    total_tag = ET.SubElement(set, "tags")
+    
+    dizi = tags.split()
+    for i in dizi:
+        ET.SubElement(total_tag, "tag").text = i
+
+    rate = ET.SubElement(set, "rating")
+    ET.SubElement(rate, 'FDM').text = str(fdm)
+    ET.SubElement(rate, 'systems').text = str(systems)
+    ET.SubElement(rate, 'cockpit').text = str(cockpit)
+    ET.SubElement(rate, 'model').text = str(model)
+
+    help = ET.SubElement(set, "help")
+    ET.SubElement(help, 'title').text = help_title
+    for j in help_lines.split("\n"):
+        ET.SubElement(help, "line").text = j
+
+
+
+
+
+    return set
+
+
+def generate_set(description, pitch_offset_deg, x_offset_m, y_offset_m, z_offset_m, fdm, systems, cockpit, model_rating, tags,fuel_tanks, help_lines, help_title, previews, flight_model,model_path, audible, panelVisibility, author, aircraft_version, sound_path, aero_file, long_description, fuel_Fraction):
+    
+    engine = aircraft_set(description, pitch_offset_deg, x_offset_m, y_offset_m, z_offset_m, fdm, systems, cockpit, model_rating, tags,fuel_tanks, help_lines, help_title, previews, flight_model,model_path, audible, panelVisibility, author, aircraft_version, sound_path, aero_file, long_description, fuel_Fraction)
+
+    # XML yapısını oluşturma
+    root = ET.Element("PropertyList")
+    root.append(engine)
+    indent(root)
+    
+    return root
+
+def generate_model(total_path):
+    st.write(total_path)
+
+# XML dosyasını okuyan fonksiyon
+def read_xml(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return file.read()
+
+
 #MAIN FUNCTION
 def main_texts():
     st.set_page_config(layout="wide")
@@ -195,6 +263,8 @@ def main_texts():
         ''')
 
     st.info('**Auxiliary Resources**: The most important sites **[Flightgear is the official site](https://www.flightgear.org/)** to help you where you get stuck. You can also examine the **[JSBSim file](https://jsbsim.sourceforge.net/JSBSimReferenceManual.pdf)**. You can also find the **[Aeromatic site](https://jsbsim.sourceforge.net/aeromatic2.html)** from which we are inspired here!', icon="ℹ️")
+    st.warning('Step 1de turboprop ve rocket seçeneklerini, step 5 ve step 7yi deneyebilirsiniz.', icon="⚠️")
+
 
 #STEPS TO ADD A AIRCRAFT
 def steps():
@@ -220,12 +290,22 @@ def steps():
                     water_injection = st.radio("Water Injection Installed?", ['yes', 'no'], index=1)
 
             # Formu oluştur
-            if st.button("Generate"):
+            if st.button(label='Generate'):
                 #engine_name,  engine_type, power_or_thrust,  power_unit,  water_injection
                 # XML dosyasını oluşturma ve kaydetme
                 engine_xml = generate_engine(engine_name, engine_type, power_or_thrust, power_unit, afterburning, water_injection)
                 save_xml(engine_xml, f"{engine_name}.xml")
                 #st.write("You are now ready to have Aeromatic generate your file. Aeromatic will create a file called `engine.php`, which is your engine configuration file. You will need to save this file with a filename of the form `engine_name.xml`.")
+
+                xml_data = read_xml('my_engine.xml')
+                st.code(xml_data, language="python", line_numbers=False)
+
+                st.download_button(
+                label="Download my_engine.xml",
+                data=xml_data,
+                file_name="my_engine.xml",
+                mime="application/xml"
+                )
 
     #STEP 2 
     st.subheader("Step 2: The Prop configuration (if applicable)...", divider=True)
@@ -443,6 +523,7 @@ def steps():
 
     # STEP 5
     st.subheader("Step 5: Root directory aircraft-set Configuration", divider=True)
+    #view, consumables, engines controls fdm eksik.
     st.write("This step defines the aircraft-set configuration file located in the root directory of the aircraft. This file contains the general description of the aircraft, its version, sound and panel settings. Also, details such as the fuel tanks used for the aircraft, model path and preview images are defined in this step.")
     with st.expander("**STEP :five:** | Root directory aircraft-set Configuration "):
         with st.container():
@@ -478,10 +559,10 @@ def steps():
             with st.container(border=True):
                 model_path = st.text_input('Model Path', 'Aircraft/Deneme/Models/Deneme.xml')
                 previews = st.text_area('Preview Paths', 'Previews/prev.jpg\nPreviews/prev1.jpg\n...')
-                tags = st.text_area('Tags', 'high-wing\nretractable-gear\nsingle-engine\n...')
+                tags = st.text_area('Tags', 'high-wing\nretractable-gear\nsingle-engine\n')
                 help_title = st.text_input('Help Title', 'Mandalina, Version 1.0 (IL-170)')
-                help_lines = st.text_area('Help Lines', 'Cruise speed: 0.2 Mach\nNever-exceed (Vne): 0.6 Mach\n...')
-                fuel_tanks = st.text_area('Fuel Tanks (Format: n|name|capacity)', '0|6L-Left Tank|13.2\n1|6L-Right Tank|13.2\n...')
+                help_lines = st.text_area('Help Lines', 'Cruise speed: 0.2 Mach\nNever-exceed (Vne): 0.6 Mach\n')
+                fuel_tanks = st.text_area('Fuel Tanks (Format: n|name|capacity)', '0|6L-Left Tank|13.2\n1|6L-Right Tank|13.2\n')
 
             with st.container(border=True):
                 cl10, cl11, cl12, cl13 = st.columns(4)
@@ -504,11 +585,23 @@ def steps():
                 with cl17:
                     pitch_offset_deg = st.text_input('Pitch Offset (deg)', '-8')
             
-            submit_button = st.button(label='Generate XML')
+            # Formu oluştur
+            if st.button(label='Generate aircraft-set.xml'):
+                #engine_name,  engine_type, power_or_thrust,  power_unit,  water_injection
+                # XML dosyasını oluşturma ve kaydetme
+                set_xml = generate_set(description, pitch_offset_deg, x_offset_m, y_offset_m, z_offset_m, fdm, systems, cockpit, model_rating, tags,fuel_tanks, help_lines, help_title, previews, flight_model,model_path, audible, panelVisibility, author, aircraft_version, sound_path, aero_file, long_description, fuel_Fraction)
+                save_xml(set_xml, f"aircraft-set.xml")
+                #st.write("You are now ready to have Aeromatic generate your file. Aeromatic will create a file called `engine.php`, which is your engine configuration file. You will need to save this file with a filename of the form `engine_name.xml`.")
 
-            if submit_button:
-                st.write('Form submitted successfully!')
-                # Burada formdan alınan verilerle XML dosyası oluşturulabilir.
+                xml_data = read_xml('aircraft-set.xml')
+                st.code(xml_data, language="python", line_numbers=False)
+
+                st.download_button(
+                label="Download aircraft-set.xml",
+                data=xml_data,
+                file_name="aircraft-set.xml",
+                mime="application/xml"
+                )
 
 
     # STEP 6
@@ -524,108 +617,247 @@ def steps():
     with st.expander("**STEP :seven:** | Models Directory Aircraft File Configuration"):
         with st.container():
             # Available aircraft parts
-                    available_parts = [
-                "Ailerons", "Elevator", "Rudder", "Flaps", "Spoilers", "Landing Gear",
-                "Canards", "Slats", "Airbrakes/Spoilers", "Specialized Control Surfaces",
-                "Propellers", "Thrust Vectoring Nozzles"
-            ]
+            #"Ailerons", "Elevator", "Rudder", "Flaps", "Landing Gear", "Canards", "Slats"
 
-            # Step 1: Select which movable parts to configure
-            #selected_parts = st.multiselect("Select movable parts to configure", available_parts)
-
-            #if st.button("Continue with inputs"):
-                #if 'Ailerons' in selected_parts:
-                    hor1, hor2 = st.columns(2)
-                    with hor1:
-                        with st.container(border=True):
+                        path_name = st.text_input("**.AC File Path Name**", "aircraft.ac")
+                        total_data = {}
+                        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["Ailerons", "Elevator", "Rudder", 'Landing Gear', 'Canards', 'Flaps','Slats'])
+                        with tab1:
                             st.write("**Ailerons**")
-                            c1, c2, c3 = st.columns(3)
+                            c1, c2, c3, c4, c5 = st.columns(5)
                             with c1:
-                                x1_a = st.number_input("Enter x1_a value", value=0.0, step=0.01)
-                            with c2:
-                                y1_a = st.number_input("Enter y1-a value", value=0.0, step=0.01)
-                            with c3:
-                                z1_a = st.number_input("Enter z1-a value", value=0.0, step=0.01)
-                            
-                            st.write("**Elevator**")
-                            c4, c5, c6  = st.columns(3)
+                                total_data['Aileron_type'] = st.selectbox("Type", ['rotate'])
+                            with c2: 
+                                total_data['Aileron_object-name'] = st.text_input("Object file name", "left_canard.079")
+                            with c3: 
+                                 total_data['Aileron_property'] = st.text_input("Property", "controls/flight/aileron")
                             with c4:
-                                x1_e = st.number_input("Enter x1-m value", value=0.0, step=0.01)
+                                 total_data['Aileron_factor'] = st.text_input("Factor", "20")
                             with c5:
-                                y1_e = st.number_input("Enter y1-m value", value=0.0, step=0.01)
+                                 total_data['Aileron_offset-deg'] = st.text_input("Offset-Deg", "0")
+
+
+                            c1, c2, c3, c4, c5, c6 = st.columns(6)
+                            with c1:
+                                total_data['Aileron_x1'] = st.number_input("Aileron _a value", value=0.0, step=0.01)
+                            with c2:
+                                total_data['Aileron_y1'] = st.number_input("Aileron-a value", value=0.0, step=0.01)
+                            with c3:
+                                total_data['Aileron_z'] = st.number_input("Aileron z1-a value", value=0.0, step=0.01)
+                            with c4:
+                                total_data['Aileron_x2'] = st.number_input("Aileron x1_a value", value=0.0, step=0.01)
+                            with c5:
+                                total_data['Aileron_y2'] = st.number_input("Aileron y1-a value", value=0.0, step=0.01)
                             with c6:
-                                z1_e = st.number_input("Enter z1-m value", value=0.0, step=0.01)
+                                total_data['Aileron_z2'] = st.number_input("Aileron z1-sa value", value=0.0, step=0.01)
 
-                            st.write("**Spoilers**")
-                            c14, c15, c16 = st.columns(3)
-                            with c14:
-                                x1_s = st.number_input("Enter x1-s value", value=0.0, step=0.01)
-                            with c15:
-                                y1_s = st.number_input("Enter y1-s value", value=0.0, step=0.01)
-                            with c16:
-                                z1_s = st.number_input("Enter z1-s value", value=0.0, step=0.01)
+                        with tab2:   
+                            st.write("**Elevator**")
+                            c1, c2, c3, c4, c5 = st.columns(5)
+                            with c1:
+                                total_data['Elevator_type'] = st.selectbox("Elevator Type", ['rotate'])
+                            with c2: 
+                                total_data['Elevator_object-name'] = st.text_input("Elevator Object file name", "left_canard.079")
+                            with c3: 
+                                 total_data['Elevator_property'] = st.text_input("Elevator Property", "controls/flight/aileron")
+                            with c4:
+                                 total_data['Elevator_factor'] = st.text_input("Elevator Factor", "20")
+                            with c5:
+                                 total_data['Elevator_offset-deg'] = st.text_input("Elevator Offset-Deg", "0")
 
-                            st.write("**Canards**")
-                            c20, c21, c22 = st.columns(3)
-                            with c20:
-                                x1_c = st.number_input("Enter x1-c value", value=0.0, step=0.01)
-                            with c21:
-                                y1_c = st.number_input("Enter y1-c value", value=0.0, step=0.01)
-                            with c22:
-                                z1_c = st.number_input("Enter z1-c value", value=0.0, step=0.01)
-                    
-                    with hor2:
-                        with st.container(border=True):
+
+                            c1, c2, c3, c4, c5, c6 = st.columns(6)
+                            with c1:
+                                total_data['Elevator_x1'] = st.number_input("Elevator x1 value", value=0.0, step=0.01)
+                            with c2:
+                                total_data['Elevator_y1'] = st.number_input("Elevator y1 value", value=0.0, step=0.01)
+                            with c3:
+                                total_data['Elevator_z1'] = st.number_input("Elevator z1 value", value=0.0, step=0.01)
+                            with c4:
+                                total_data['Elevator_x2'] = st.number_input("Elevator x2 value", value=0.0, step=0.01)
+                            with c5:
+                                total_data['Elevator_y2'] = st.number_input("Elevator y2 value", value=0.0, step=0.01)
+                            with c6:
+                                total_data['Elevator_z2'] = st.number_input("Elevator z2 value", value=0.0, step=0.01)
+
+                        with tab3:
                             st.write("**Rudder**")
-                            c7, c8, c9 = st.columns(3)
-                            with c7:
-                                x1_r = st.number_input("Enter x1-r value", value=0.0, step=0.01)
-                            with c8:
-                                y1_r = st.number_input("Enter y1-r value", value=0.0, step=0.01)
-                            with c9:
-                                z1_r = st.number_input("Enter z1-r value", value=0.0, step=0.01)
+                            c1, c2, c3, c4, c5 = st.columns(5)
+                            with c1:
+                                total_data['Rudder_type'] = st.selectbox("Rudder Type", ['rotate'])
+                            with c2: 
+                                total_data['Rudder_object-name'] = st.text_input("Rudder Object file name", "left_canard.079")
+                            with c3: 
+                                 total_data['Rudder_property'] = st.text_input("Rudder Property", "controls/flight/aileron")
+                            with c4:
+                                 total_data['Rudder_factor'] = st.text_input("Rudder Factor", "20")
+                            with c5:
+                                 total_data['Rudder_offset-deg'] = st.text_input("Rudder Offset-Deg", "0")
 
-                            st.write("**Flaps**")
-                            c10, c11, c12 = st.columns(3)
-                            with c10:
-                                x1_f = st.number_input("Enter x1-f value", value=0.0, step=0.01)
-                            with c11:
-                                y1_f = st.number_input("Enter y1-f value", value=0.0, step=0.01)
-                            with c12:
-                                z1_f = st.number_input("Enter z1-f value", value=0.0, step=0.01)
 
+                            c1, c2, c3, c4, c5, c6 = st.columns(6)
+                            with c1:
+                                total_data['Rudder_x1'] = st.number_input("Rudder x1 value", value=0.0, step=0.01)
+                            with c2:
+                                total_data['Rudder_y1'] = st.number_input("Rudder y1 value", value=0.0, step=0.01)
+                            with c3:
+                                total_data['Rudder_z1'] = st.number_input("Rudder z1 value", value=0.0, step=0.01)
+                            with c4:
+                                total_data['Rudder_x2'] = st.number_input("Rudder x2 value", value=0.0, step=0.01)
+                            with c5:
+                                total_data['Rudder_y2'] = st.number_input("Rudder y2 value", value=0.0, step=0.01)
+                            with c6:
+                                total_data['Rudder_z2'] = st.number_input("Rudder z2 value", value=0.0, step=0.01)
+
+                        with tab4:
                             st.write("**Landing Gear**")
-                            c17, c18, c19 = st.columns(3)
-                            with c17:
-                                x1_l = st.number_input("Enter x1-l value", value=0.0, step=0.01)
-                            with c18:
-                                y1_l = st.number_input("Enter y1-l value", value=0.0, step=0.01)
-                            with c19:
-                                z1_l = st.number_input("Enter z1-l value", value=0.0, step=0.01)
+                            c1, c2, c3, c4, c5 = st.columns(5)
+                            with c1:
+                                total_data['Landing_Gear_type'] = st.selectbox("Landing Gear Type", ['rotate'])
+                            with c2: 
+                                total_data['Landing_Gear_object-name'] = st.text_input("Landing Gear Object file name", "left_landing_gear.079")
+                            with c3: 
+                                total_data['Landing_Gear_property'] = st.text_input("Landing Gear Property", "controls/flight/aileron")
+                            with c4:
+                                total_data['Landing_Gear_factor'] = st.text_input("Landing Gear Factor", "20")
+                            with c5:
+                                total_data['Landing_Gear_offset-deg'] = st.text_input("Landing Gear Offset-Deg", "0")
 
+                            c1, c2, c3, c4, c5, c6 = st.columns(6)
+                            with c1:
+                                total_data['Landing_Gear_x1'] = st.number_input("Landing Gear x1 value", value=0.0, step=0.01)
+                            with c2:
+                                total_data['Landing_Gear_y1'] = st.number_input("Landing Gear y1 value", value=0.0, step=0.01)
+                            with c3:
+                                total_data['Landing_Gear_z1'] = st.number_input("Landing Gear z1 value", value=0.0, step=0.01)
+                            with c4:
+                                total_data['Landing_Gear_x2'] = st.number_input("Landing Gear x2 value", value=0.0, step=0.01)
+                            with c5:
+                                total_data['Landing_Gear_y2'] = st.number_input("Landing Gear y2 value", value=0.0, step=0.01)
+                            with c6:
+                                total_data['Landing_Gear_z2'] = st.number_input("Landing Gear z2 value", value=0.0, step=0.01)
+
+
+                            c1, c2, c3, c4, c5, c6 = st.columns(6)
+                            with c1:
+                                total_data['Landing_Gear_x1'] = st.number_input("Landing_Gear x1 value", value=0.0, step=0.01)
+                            with c2:
+                                total_data['Landing_Gear_y1'] = st.number_input("Landing_Gear y1 value", value=0.0, step=0.01)
+                            with c3:
+                                total_data['Landing_Gear_z1'] = st.number_input("Landing_Gear z1 value", value=0.0, step=0.01)
+                            with c4:
+                                total_data['Rudder_x2'] = st.number_input("Landing_Gear x2 value", value=0.0, step=0.01)
+                            with c5:
+                                total_data['Landing_Gear_y2'] = st.number_input("Landing_Gear y2 value", value=0.0, step=0.01)
+                            with c6:
+                                total_data['Landing_Gear_z2'] = st.number_input("Landing_Gear z2 value", value=0.0, step=0.01)
+
+
+                        with tab5:
+                            st.write("**Canards**")
+                            c1, c2, c3, c4, c5 = st.columns(5)
+                            with c1:
+                                total_data['Canards_type'] = st.selectbox("Canards Type", ['rotate'])
+                            with c2: 
+                                total_data['Canards_object-name'] = st.text_input("Canards Object file name", "left_canard.079")
+                            with c3: 
+                                total_data['Canards_property'] = st.text_input("Canards Property", "controls/flight/aileron")
+                            with c4:
+                                total_data['Canards_factor'] = st.text_input("Canards Factor", "20")
+                            with c5:
+                                total_data['Canards_offset-deg'] = st.text_input("Canards Offset-Deg", "0")
+
+                            c1, c2, c3, c4, c5, c6 = st.columns(6)
+                            with c1:
+                                total_data['Canards_x1'] = st.number_input("Canards x1 value", value=0.0, step=0.01)
+                            with c2:
+                                total_data['Canards_y1'] = st.number_input("Canards y1 value", value=0.0, step=0.01)
+                            with c3:
+                                total_data['Canards_z1'] = st.number_input("Canards z1 value", value=0.0, step=0.01)
+                            with c4:
+                                total_data['Canards_x2'] = st.number_input("Canards x2 value", value=0.0, step=0.01)
+                            with c5:
+                                total_data['Canards_y2'] = st.number_input("Canards y2 value", value=0.0, step=0.01)
+                            with c6:
+                                total_data['Canards_z2'] = st.number_input("Canards z2 value", value=0.0, step=0.01)
+
+                            
+                        with tab6:
+                            st.write("**Flaps**")
+                            c1, c2, c3, c4, c5 = st.columns(5)
+                            with c1:
+                                total_data['Flaps_type'] = st.selectbox("Flaps Type", ['rotate'])
+                            with c2: 
+                                total_data['Flaps_object-name'] = st.text_input("Flaps Object file name", "left_canard.079")
+                            with c3: 
+                                 total_data['Flaps_property'] = st.text_input("Flaps Property", "controls/flight/aileron")
+                            with c4:
+                                 total_data['Flaps_factor'] = st.text_input("Flaps Factor", "20")
+                            with c5:
+                                 total_data['Flaps_offset-deg'] = st.text_input("Flaps Offset-Deg", "0")
+
+
+                            c1, c2, c3, c4, c5, c6 = st.columns(6)
+                            with c1:
+                                total_data['Flaps_x1'] = st.number_input("Flaps x1 value", value=0.0, step=0.01)
+                            with c2:
+                                total_data['Flaps_y1'] = st.number_input("Flaps y1 value", value=0.0, step=0.01)
+                            with c3:
+                                total_data['Flaps_z1'] = st.number_input("Flaps z1 value", value=0.0, step=0.01)
+                            with c4:
+                                total_data['Flaps_x2'] = st.number_input("Flaps x2 value", value=0.0, step=0.01)
+                            with c5:
+                                total_data['Flaps_y2'] = st.number_input("Flaps y2 value", value=0.0, step=0.01)
+                            with c6:
+                                total_data['Flaps_z2'] = st.number_input("Flaps z2 value", value=0.0, step=0.01)
+
+
+                        with tab7: 
                             st.write("**Slats**")
-                            c23, c24, c25 = st.columns(3)
-                            with c23:
-                                x1_sl = st.number_input("Enter x1-sl value", value=0.0, step=0.01)
-                            with c24:
-                                y1_sl = st.number_input("Enter y1-sl value", value=0.0, step=0.01)
-                            with c25:
-                                z1_sl = st.number_input("Enter z1-sl value", value=0.0, step=0.01)
+                            c1, c2, c3, c4, c5 = st.columns(5)
+                            with c1:
+                                total_data['Slats_type'] = st.selectbox("Slats Type", ['rotate'])
+                            with c2: 
+                                total_data['Slats_object-name'] = st.text_input("Slats Object file name", "left_slats.079")
+                            with c3: 
+                                total_data['Slats_property'] = st.text_input("Slats Property", "controls/flight/aileron")
+                            with c4:
+                                total_data['Slats_factor'] = st.text_input("Slats Factor", "20")
+                            with c5:
+                                total_data['Slats_offset-deg'] = st.text_input("Slats Offset-Deg", "0")
 
-                            axis7 = {"x1-m": x1_sl, "y1-m": y1_sl, "z1-m": z1_sl}
+                            c1, c2, c3, c4, c5, c6 = st.columns(6)
+                            with c1:
+                                total_data['Slats_x1'] = st.number_input("Slats x1 value", value=0.0, step=0.01)
+                            with c2:
+                                total_data['Slats_y1'] = st.number_input("Slats y1 value", value=0.0, step=0.01)
+                            with c3:
+                                total_data['Slats_z1'] = st.number_input("Slats z1 value", value=0.0, step=0.01)
+                            with c4:
+                                total_data['Slats_x2'] = st.number_input("Slats x2 value", value=0.0, step=0.01)
+                            with c5:
+                                total_data['Slats_y2'] = st.number_input("Slats y2 value", value=0.0, step=0.01)
+                            with c6:
+                                total_data['Slats_z2'] = st.number_input("Slats z2 value", value=0.0, step=0.01)
 
 
-                    axis = {"x1-m": x1_a, "y1-m": y1_a, "z1-m": z1_a}
-                    axis2 = {"x1-m": x1_e, "y1-m": y1_e, "z1-m": z1_e}
-                    axis3 = {"x1-m": x1_r, "y1-m": y1_r, "z1-m": z1_r}
-                    axis4 = {"x1-m": x1_f, "y1-m": y1_f, "z1-m": z1_f}
-                    axis5 = {"x1-m": x1_s, "y1-m": y1_s, "z1-m": z1_s}
-                    axis6 = {"x1-m": x1_l, "y1-m": y1_l, "z1-m": z1_l}
-                    axis7 = {"x1-m": x1_c, "y1-m": y1_c, "z1-m": z1_c}
 
+                        # Formu oluştur
+                        if st.button(label='Generate set file'):
+                            st.write("Olusturuldu.")
+                            # XML dosyasını oluşturma ve kaydetme
+                            #model_xml = generate_model(total_data)
+                            #save_xml(model_xml, f"{path_name}.xml")
+                            #st.write("You are now ready to have Aeromatic generate your file. Aeromatic will create a file called `engine.php`, which is your engine configuration file. You will need to save this file with a filename of the form `engine_name.xml`.")
 
-                    if st.button("Parameters Ready!"):
-                        st.write(axis, axis2, axis3, axis4, axis5, axis6, axis7)
+                            #xml_data = read_xml('aircraft-set.xml')
+                            #st.code(xml_data, language="python", line_numbers=False)
+
+                            #st.download_button(
+                            #label="Download aicraft-set.xml",
+                            #data=xml_data,
+                            #file_name="my_engine.xml",
+                            #mime="application/xml")
 
 #FOOTER FUNCTION
 def footer():
