@@ -6,13 +6,13 @@
   Inputs
     name: turboprop
     type: turboprop
-    power: 1000.0
+    power: 224.8
     augmented: no
     injected: no
 
 --><turboprop_engine name="my_engine">
-    <power>1000.0</power>
-    <units>horsepower</units>
+    <power>224.8</power>
+    <units>newtons</units>
     <bypassratio>0.0</bypassratio>
     <tsfc>0.55</tsfc>
     <bleed>0.03</bleed>
@@ -42,7 +42,8 @@
             <independentVar lookup="row">velocities/mach</independentVar>
             <independentVar lookup="column">atmosphere/density-altitude</independentVar>
             <tableData> MilThrust
-    -10000       0   10000   20000   30000   40000   500000.0  1.1260  1.0000  0.7400  0.5340  0.3720  0.2410  0.0
+    -10000       0   10000   20000   30000   40000   50000
+0.0  1.1260  1.0000  0.7400  0.5340  0.3720  0.2410  0.0
 0.2  1.1000  0.9340  0.6970  0.5060  0.3550  0.2310  0.0
 0.4  1.0000  0.6410  0.6120  0.4060  0.3570  0.2330  0.0
 0.6  0.4430  0.3510  0.2710  0.2020  0.1780  0.1020  0.0
