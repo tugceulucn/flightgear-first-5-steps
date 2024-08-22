@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import xml.etree.ElementTree as ET
 from math import pow, floor
+from io import BytesIO
+
 
 version = 1.0
 
@@ -78,6 +80,17 @@ class generate:
         afterburning = step1_dict["afterburning"]
         water_injection = step1_dict["water_injection"]
         
+        # Yorumlar ekleme
+        comments = f"\n  File: {engine_name}.xml\n  Author: Aero-Matic v {version}\n\n  Inputs\n    name: {engine_type}\n    type: {engine_type}\n    power: {power_or_thrust}\n    augmented: {afterburning}\n    injected: {water_injection}\n\n"
+
+        # XML yapısını oluşturma
+        root = ET.Element(f"{engine_type}_engine")
+        root.append(ET.Comment(comments))
+       
+
+        # Motor ismi ekleme
+        root.set('name', engine_name)
+
         # Power unit conversion
         if power_unit == 'kw':
             power_or_thrust *= 1.341
@@ -86,22 +99,21 @@ class generate:
 
         # Motor türüne göre XML elementini oluşturma
         if engine_type == 'piston':
-            engine = ET.Element('piston_engine')
-            ET.SubElement(engine, 'power').text = str(power_or_thrust)
-            ET.SubElement(engine, "minmp", attrib={"unit":"INHG"}).text = str(10.0)
-            ET.SubElement(engine, "maxmp", attrib={"unit":"INHG"}).text = str(28.5)
+            ET.SubElement(root, 'power').text = str(power_or_thrust)
+            ET.SubElement(root, "minmp", attrib={"unit":"INHG"}).text = str(10.0)
+            ET.SubElement(root, "maxmp", attrib={"unit":"INHG"}).text = str(28.5)
             displ = power_or_thrust * 1.9
-            ET.SubElement(engine, "displacement", attrib={"unit" : "IN3"}).text = str(displ)
-            ET.SubElement(engine, 'maxhp').text = str(power_or_thrust)
-            ET.SubElement(engine, 'cycles').text = str(4)
-            ET.SubElement(engine, 'idlerpm').text = str(700)
-            ET.SubElement(engine, 'maxrpm').text = str(2800)
-            ET.SubElement(engine, 'sparkfaildrop').text = str(0.1)
-            ET.SubElement(engine, 'volumetric-efficiency').text = str(0.85)
-            ET.SubElement(engine, 'man-press-lag').text = str(0.1)
-            ET.SubElement(engine, 'static-friction', attrib={"unit" : "HP"}).text = str(power_or_thrust*0.005)
-            ET.SubElement(engine, 'starter-torque').text = str(power_or_thrust*0.8)
-            ET.SubElement(engine, 'starter-rpm').text = "1400"
+            ET.SubElement(root, "displacement", attrib={"unit" : "IN3"}).text = str(displ)
+            ET.SubElement(root, 'maxhp').text = str(power_or_thrust)
+            ET.SubElement(root, 'cycles').text = str(4)
+            ET.SubElement(root, 'idlerpm').text = str(700)
+            ET.SubElement(root, 'maxrpm').text = str(2800)
+            ET.SubElement(root, 'sparkfaildrop').text = str(0.1)
+            ET.SubElement(root, 'volumetric-efficiency').text = str(0.85)
+            ET.SubElement(root, 'man-press-lag').text = str(0.1)
+            ET.SubElement(root, 'static-friction', attrib={"unit" : "HP"}).text = str(power_or_thrust*0.005)
+            ET.SubElement(root, 'starter-torque').text = str(power_or_thrust*0.8)
+            ET.SubElement(root, 'starter-rpm').text = "1400"
 
             stroke = 4.375
             bore = 5.125
@@ -112,39 +124,115 @@ class generate:
             else:
                 n_cylinders = floor(n_cylinders+0.5)
 
-            ET.SubElement(engine, 'stroke', attrib={"unit" : "IN"}).text = str(4.375)
-            ET.SubElement(engine, 'bore', attrib={"unit" : "IN"}).text = str(bore)
-            ET.SubElement(engine, 'cylinders').text = str(n_cylinders)
-            ET.SubElement(engine, 'compression_ratio').text = "8.0"
+            ET.SubElement(root, 'stroke', attrib={"unit" : "IN"}).text = str(4.375)
+            ET.SubElement(root, 'bore', attrib={"unit" : "IN"}).text = str(bore)
+            ET.SubElement(root, 'cylinders').text = str(n_cylinders)
+            ET.SubElement(root, 'compression_ratio').text = "8.0"
 
-            common_functions.indent(engine)
+            common_functions.indent(root)
 
-            return engine
-
+            return root
 
         elif engine_type == 'turbine':
-            engine = ET.Element('turbine_engine', attrib={'name': f'{engine_name}'})
-            #maxthrust = power*1.5 if afterburning : power;
+            maxthrust = power_or_thrust*1.5 if afterburning else power_or_thrust
+            
 
-            ET.SubElement(engine, 'power').text = str(power_or_thrust)
-            ET.SubElement(engine, 'augmented').text = str(afterburning).lower()
-            ET.SubElement(engine, 'injected').text = str(water_injection).lower()
+            ET.SubElement(root, 'milthrust').text = str(power_or_thrust)
+            if (afterburning == "yes"):
+                ET.SubElement(root, 'maxthrust').text = str(maxthrust)
+                ET.SubElement(root, 'atsfc').text = str(1.7)
+                ET.SubElement(root, 'augmented').text = str(1)
+                ET.SubElement(root, 'augmethod').text = str(1)
+            else:
+                ET.SubElement(root, 'augmented').text = str(0)
 
+            ET.SubElement(root, 'bypassratio').text = str(1.0)
+            ET.SubElement(root, 'tsfc').text = str(0.8)
+            ET.SubElement(root, 'bleed').text = str(0.03)
+            ET.SubElement(root, 'idlen1').text = str(30.0)
+            ET.SubElement(root, 'idlen2').text = str(60.0)
+            ET.SubElement(root, 'maxn1').text = str(100.0)
+            ET.SubElement(root, 'maxn2').text = str(100.0)
+            ET.SubElement(root, 'injected').text = str(1 if water_injection == "yes" else 0)
+            
+            idlethrust = ('IdleThrust'
+                "    -10000     0     10000   20000   30000   40000   50000   60000\n"
+                "0.0  0.0430  0.0488  0.0528  0.0694  0.0899  0.1183  0.1467  0\n"
+                "0.2  0.0500  0.0501  0.0335  0.0544  0.0797  0.1049  0.1342  0\n"
+                "0.4  0.0040  0.0047  0.0020  0.0272  0.0595  0.0891  0.1203  0\n"
+                "0.6  0.0     0.0     0.0     0.0     0.0276  0.0718  0.1073  0\n"
+                "0.8  0.0     0.0     0.0     0.0     0.0474  0.0868  0.0900  0\n"
+                "1.0  0.0     0.0     0.0     0.0     0.0     0.0552  0.0800  0\n")
 
+            milthrust = ('MilThrust'
+            "     -10000       0   10000   20000   30000   40000   50000   60000\n"
+            "0.0   1.2600  1.0000  0.7400  0.5340  0.3720  0.2410  0.1490  0\n"
+            "0.2   1.1710  0.9340  0.6970  0.5060  0.3550  0.2310  0.1430  0\n"
+            "0.4   1.1500  0.9210  0.6920  0.5060  0.3570  0.2330  0.1450  0\n"
+            "0.6   1.1810  0.9510  0.7210  0.5320  0.3780  0.2480  0.1540  0\n"
+            "0.8   1.2580  1.0200  0.7820  0.5820  0.4170  0.2750  0.1700  0\n"
+            "1.0   1.3690  1.1200  0.8710  0.6510  0.4750  0.3150  0.1950  0\n"
+            "1.2   1.4850  1.2300  0.9750  0.7440  0.5450  0.3640  0.2250  0\n"
+            "1.4   1.5941  1.3400  1.0860  0.8450  0.6280  0.4240  0.2630  0\n")
+
+            # Table elementini oluşturma ve veriyi ekleme
+            turbine_idlethust= common_functions.make_table('IdleThrust', idlethrust)
+            turbine_milthrust = common_functions.make_table('MilThrust', milthrust)
+            root.append(turbine_idlethust)
+            root.append(turbine_milthrust)
+
+            if (afterburning == "yes"):
+                augthrust = ('AugThrust'
+                "      -10000       0   10000   20000   30000   40000   50000   60000\n"
+                "0.0    1.1816  1.0000  0.8184  0.6627  0.5280  0.3756  0.2327  0\n"
+                "0.2    1.1308  0.9599  0.7890  0.6406  0.5116  0.3645  0.2258  0\n"
+                "0.4    1.1150  0.9474  0.7798  0.6340  0.5070  0.3615  0.2240  0\n"
+                "0.6    1.1284  0.9589  0.7894  0.6420  0.5134  0.3661  0.2268  0\n"
+                "0.8    1.1707  0.9942  0.8177  0.6647  0.5309  0.3784  0.2345  0\n"
+                "1.0    1.2411  1.0529  0.8648  0.7017  0.5596  0.3983  0.2467  0\n"
+                "1.2    1.3287  1.1254  0.9221  0.7462  0.5936  0.4219  0.2614  0\n"
+                "1.4    1.4365  1.2149  0.9933  0.8021  0.6360  0.4509  0.2794  0\n"
+                "1.6    1.5711  1.3260  1.0809  0.8700  0.6874  0.4860  0.3011  0\n"
+                "1.8    1.7301  1.4579  1.1857  0.9512  0.7495  0.5289  0.3277  0\n"
+                "2.0    1.8314  1.5700  1.3086  1.0474  0.8216  0.5786  0.3585  0\n"
+                "2.2    1.9700  1.6900  1.4100  1.2400  0.9100  0.6359  0.3940  0\n"
+                "2.4    2.0700  1.8000  1.5300  1.3400  1.0000  0.7200  0.4600  0\n"
+                "2.6    2.2000  1.9200  1.6400  1.4400  1.1000  0.8000  0.5200  0\n")
+
+                turbine_augthrust = common_functions.make_table('AugThrust', augthrust)
+                root.append(turbine_augthrust)
+
+            if (water_injection=="yes"):
+                inj = ('Injection'
+                "       0       50000\n"
+                "0.0    1.2000  1.2000\n"
+                "1.0    1.2000  1.2000\n"
+                )
+
+                turbine_inj = common_functions.make_table('Injection', inj)
+                root.append(turbine_inj)
+
+            
+
+            common_functions.indent(root)
+
+            return root
 
         elif engine_type == 'turboprop':
-            engine = ET.Element('turboprop_engine')
-            ET.SubElement(engine, 'power').text = str(power_or_thrust)
-            ET.SubElement(engine, 'units').text = str(power_unit)
-            ET.SubElement(engine, 'bypassratio').text = str(0.0)
-            ET.SubElement(engine, 'tsfc').text = str(0.55)
-            ET.SubElement(engine, 'bleed').text = str(0.03)
-            ET.SubElement(engine, 'idlen1').text = str(30.0)
-            ET.SubElement(engine, 'idlen2').text = str(60.0)
-            ET.SubElement(engine, 'maxn1').text = str(100.0)
-            ET.SubElement(engine, 'maxn2').text= str(100.0)
-            ET.SubElement(engine, 'augmented').text = str(0)
-            ET.SubElement(engine, 'injected').text = str(0)
+            if (power_unit == "horsepower" or power_unit == "pounds"):
+                power_or_thrust *= 2.24
+        
+            ET.SubElement(root, 'milthrust').text = str(power_or_thrust)
+            ET.SubElement(root, 'bypassratio').text = str(0.0)
+            ET.SubElement(root, 'tsfc').text = str(0.55)
+            ET.SubElement(root, 'bleed').text = str(0.03)
+            ET.SubElement(root, 'idlen1').text = str(30.0)
+            ET.SubElement(root, 'idlen2').text = str(60.0)
+            ET.SubElement(root, 'maxn1').text = str(100.0)
+            ET.SubElement(root, 'maxn2').text= str(100.0)
+            ET.SubElement(root, 'augmented').text = str(0)
+            ET.SubElement(root, 'injected').text = str(0)
+            #ET.SubElement(root, 'power').text = str(power_or_thrust)
 
             idlethrust = (
                 "IdleThrust\n"
@@ -171,37 +259,126 @@ class generate:
             # Table elementini oluşturma ve veriyi ekleme
             table_elem = common_functions.make_table('IdleThrust', idlethrust)
             table_elem_2 = common_functions.make_table('MilThrust', milthrust)
-            engine.append(table_elem)
-            engine.append(table_elem_2)
+            root.append(table_elem)
+            root.append(table_elem_2)
 
-            common_functions.indent(engine)
+            common_functions.indent(root)
 
         elif engine_type == 'rocket':
             # Roket motor XML elementi oluşturma
-            engine = ET.Element('rocket_engine')
-            ET.SubElement(engine, 'shr').text = str(1.23)
-            ET.SubElement(engine, 'max_pc').text = str(86556)
-            ET.SubElement(engine, 'variance').text = str(0.1)
-            ET.SubElement(engine, 'prop_eff').text = str(0.67)
-            ET.SubElement(engine, 'maxthrottle').text = str(1.0)
-            ET.SubElement(engine, 'minthrottle').text = str(0.4)
-            ET.SubElement(engine, 'slfuelflowmax').text = str(91.5)
-            ET.SubElement(engine, 'sloxiflowmax').text = str(105.2)
+            ET.SubElement(root, 'shr').text = str(1.23)
+            ET.SubElement(root, 'max_pc').text = str(86556)
+            ET.SubElement(root, 'variance').text = str(0.1)
+            ET.SubElement(root, 'prop_eff').text = str(0.67)
+            ET.SubElement(root, 'maxthrottle').text = str(1.0)
+            ET.SubElement(root, 'minthrottle').text = str(0.4)
+            ET.SubElement(root, 'slfuelflowmax').text = str(91.5)
+            ET.SubElement(root, 'sloxiflowmax').text = str(105.2)
 
-            common_functions.indent(engine)
-
-        # Motor ismi ekleme
-        engine.set('name', engine_name)
-
-        # Yorumlar ekleme
-        comments = f"\n  File: {engine_name}.xml\n  Author: Aero-Matic v {version}\n\n  Inputs\n    name: {engine_type}\n    type: {engine_type}\n    power: {power_or_thrust}\n    augmented: {afterburning}\n    injected: {water_injection}\n\n"
-
-        # XML yapısını oluşturma
-        root = ET.Element("root")
-        root.append(ET.Comment(comments))
-        root.append(engine)
-        
+            common_functions.indent(root)
+       
         return root 
+    
+    def aircraft_set(self, step5_dict):
+        root = ET.Element('PropertyList')
+        
+        # sim element
+        sim = ET.SubElement(root, 'sim')
+        
+        # Adding the description and author
+        sim.append(ET.Comment("Talking about aircraft on Flightgear GUI"))
+        ET.SubElement(sim, 'description').text = step5_dict["description"]
+        ET.SubElement(sim, 'author').text = step5_dict["author"]
+        ET.SubElement(sim, 'long-description').text = step5_dict["long_description"]
+        ET.SubElement(sim, 'aircraft-version').text = step5_dict["aircraft_version"]
+
+        flight_model = step5_dict["flight_model"]
+
+        sim.append(ET.Comment("Engine and fuel information"))
+        ET.SubElement(sim, 'fligh-model').text = "jsb" if flight_model == "JSBSim" else "yasim"
+        ET.SubElement(sim, 'aero').text = step5_dict["aero_file"]
+        ET.SubElement(sim, 'fuel-fraction').text = step5_dict["fuel_Fraction"]
+
+        sim.append(ET.Comment("Engine and fuel information"))
+        sound_tag = ET.SubElement(sim, 'sound')
+        ET.SubElement(sound_tag, "audible").text = step5_dict["audible"]
+        ET.SubElement(sound_tag, "path").text = step5_dict["sound_path"]
+
+        panel_tag = ET.SubElement(sim, 'panel')
+        ET.SubElement(panel_tag, "visibility", attrib={"archive":"n"}).text = step5_dict["panelVisibility"]
+
+        model_tag = ET.SubElement(sim, 'model')
+        ET.SubElement(model_tag, "path", attrib={"archive":"y"}).text = step5_dict["model_path"]
+
+        previews = ET.SubElement(sim, "previews")
+        prev = ET.SubElement(previews, "preview")
+        ET.SubElement(prev, 'type').text = 'exterior'
+        ET.SubElement(prev, 'path').text = 'Previews/turkey.png'
+        ET.SubElement(prev, 'splash').text = 'true'
+        
+        total_tags = ET.SubElement(sim, "tags")
+        
+        dizi = step5_dict["tags"].split()
+        for i in dizi:
+            ET.SubElement(total_tags, "tag").text = i
+
+        rate = ET.SubElement(sim, "rating")
+        ET.SubElement(rate, 'FDM').text = str(step5_dict["fdm"])
+        ET.SubElement(rate, 'systems').text = str(step5_dict["systems"])
+        ET.SubElement(rate, 'cockpit').text = str(step5_dict["cockpit"])
+        ET.SubElement(rate, 'model').text = str(step5_dict["model_rating"])
+
+        help = ET.SubElement(sim, "help")
+        ET.SubElement(help, 'title').text = step5_dict["help_title"]
+        for j in step5_dict["help_lines"].split("\n"):
+            ET.SubElement(help, "line").text = j
+
+        rate = ET.SubElement(sim, "view")
+        ET.SubElement(rate, 'internal', attrib={"archive": "y"}).text ="true"
+        config = ET.SubElement(rate, "config")
+        ET.SubElement(config, "x-offset-m", attrib={"archive": "y"}).text = str(step5_dict["x_offset_m"])
+        ET.SubElement(config, "y-offset-m", attrib={"archive": "y"}).text = str(step5_dict["y_offset_m"])
+        ET.SubElement(config, "z-offset-m", attrib={"archive": "y"}).text = str(step5_dict["z_offset_m"])
+        ET.SubElement(config, "pitch-offset-deg").text = str(step5_dict["pitch_offset_deg"])
+
+        consumables = step5_dict["fuel_tanks"]
+        consumables = ET.SubElement(sim, "consumables")
+        fuel = ET.SubElement(consumables, "fuel")
+        
+        fuel_row = step5_dict["fuel_tanks"].split("\n")
+        fuel_dict = []
+
+        for i in fuel_row:
+            fuel_dict.append(i.split("|"))
+
+        lenght_fuel = (len(fuel_dict))
+
+        j = 0
+        for i in range (lenght_fuel):
+            tank = ET.SubElement(fuel, "tank", attrib={"n": f"{i}"})
+            ET.SubElement(tank, "name").text = str(fuel_dict[i][j+1])
+            ET.SubElement(tank, "capacity", attrib={"unit": "LBS"}).text = str(fuel_dict[i][j+2])
+            ET.SubElement(tank, "selected", attrib={"type": "bool"}).text = "true"
+            
+        engines = ET.SubElement(root, "engines")
+        engine = ET.SubElement(engines, "engine")
+        ET.SubElement(engine, "rpm").text = str(step5_dict["rpm"])
+
+        fdm = ET.SubElement(root, "fdm")
+        flight = ET.SubElement(fdm, "flight")
+        ET.SubElement(flight, "elevator-trim").text = str(step5_dict["aileron-trim"])
+        ET.SubElement(flight, "elevator-trim").text = str(step5_dict["elevator-trim"])
+        ET.SubElement(flight, "rudder-trim").text = str(step5_dict["rudder-trim"])
+
+        controls = ET.SubElement(root, "controls")
+        engin = ET.SubElement(controls, "engines")
+        ET.SubElement(engin, "active-engine").text = "0"
+        ET.SubElement(engin, "running").text = "true"
+
+        common_functions.indent(root)
+        return root
+        
+ 
 
 class Frontend:
     def __init__(self):
@@ -234,6 +411,7 @@ class Frontend:
         st.warning('Step 1de turboprop ve rocket seçeneklerini, step 5 ve step 7yi deneyebilirsiniz.', icon="⚠️")
 
         self.step1()
+        self.step5()
 
         footer_col1, footer_col2 = st.columns(2)
         with footer_col1:
@@ -281,8 +459,116 @@ class Frontend:
                         label="Download my_engine.xml",
                         data=xml_data,
                         file_name="my_engine.xml",
+                        mime="application/xml")
+
+    def step5(self):
+        st.subheader("Step 5: Root directory aircraft-set Configuration", divider=True)
+        #view, consumables, engines controls fdm eksik.
+        st.write("This step defines the aircraft-set configuration file located in the root directory of the aircraft. This file contains the general description of the aircraft, its version, sound and panel settings. Also, details such as the fuel tanks used for the aircraft, model path and preview images are defined in this step.")
+        
+        step5_dict = {}  # Create an empty dictionary
+
+        with st.expander("**STEP :five:** | Root directory aircraft-set Configuration "):
+            with st.container():
+                with st.container(border=True):
+                        cl1, cl2, cl3 = st.columns(3)
+                        with cl1:
+                            step5_dict["description"] = st.text_input('Description', 'Mandalina 1.0| IDEALAB (2024)')
+                        with cl2:
+                            step5_dict["author"] = st.text_input('Author', 'Edip Sevincer(Manager), Selami Korkmaz(Designer)...')
+                        with cl3:
+                            step5_dict["aircraft_version"] = st.text_input('Aircraft Version', '1.0')
+
+                with st.container(border=True):
+                    step5_dict["long_description"] = st.text_area('Long Description', 'Mandalina is an unmanned aerial vehicle produced by the IDEALAB company...')
+                    cl4, cl5, cl6 = st.columns(3)
+                    with cl4:
+                        step5_dict["aero_file"] = st.text_input("Aerodynamic Model File Name", value="aircraft")
+                    with cl5:
+                        step5_dict["fuel_Fraction"] = st.text_input("Fuel Fraction", value="1.0")
+                    with cl6:
+                        step5_dict["sound_path"] = st.text_input('Sound Path', 'Aircraft/Deneme/Sounds/mandalina-sound.xml')
+                    
+                with st.container(border=True):
+                    cl7, cl8, cl9 = st.columns(3)
+                    with cl7:
+                        step5_dict["flight_model"] = st.radio("Flight Model", ['JSBSim', 'YASim'], index=1)
+                    with cl8:
+                        step5_dict["panelVisibility"] = st.radio("Aircraft Panel Visibility", ['True', 'False'], index=1)
+                    with cl9:
+                        step5_dict["audible"] = st.radio("Sound Audible", ['True', 'False'], index=1)
+
+                with st.container(border=True):
+                    step5_dict["model_path"] = st.text_input('Model Path', 'Aircraft/Deneme/Models/Deneme.xml')
+                    #step5_dict["previews"] = st.text_area('Preview Paths', 'Previews/prev.jpg\nPreviews/prev1.jpg\n...')
+                    step5_dict["tags"] = st.text_area('Tags', 'high-wing\nretractable-gear\nsingle-engine\n')
+                    step5_dict["help_title"] = st.text_input('Help Title', 'Mandalina, Version 1.0 (IL-170)')
+                    step5_dict["help_lines"] = st.text_area('Help Lines', 'Cruise speed: 0.2 Mach\nNever-exceed (Vne): 0.6 Mach\n')
+                    step5_dict["fuel_tanks"] = st.text_area('Fuel Tanks (Format: n|name|capacity)', '0|6L-Left Tank|13.2\n1|6L-Right Tank|13.2\n')
+
+                with st.container(border=True):
+                    cl10, cl11, cl12, cl13 = st.columns(4)
+                    with cl10:
+                        step5_dict["fdm"] = st.text_input('FDM Rating', '2')
+                    with cl11:
+                        step5_dict["systems"] = st.text_input('Systems Rating', '1')
+                    with cl12:
+                        step5_dict["cockpit"] = st.text_input('Cockpit Rating', '0')
+                    with cl13:
+                        step5_dict["model_rating"] = st.text_input('Model Rating', '2')
+
+                    cl14, cl15, cl16, cl17 = st.columns(4)
+                    with cl14:
+                        step5_dict["x_offset_m"] = st.text_input('X-Offset (m)', '0.0')
+                    with cl15:
+                        step5_dict["y_offset_m"] = st.text_input('Y-Offset (m)', '-0.3')
+                    with cl16:
+                        step5_dict["z_offset_m"] = st.text_input('Z-Offset (m)', '0.9')
+                    with cl17:
+                        step5_dict["pitch_offset_deg"] = st.text_input('Pitch Offset (deg)', '-8')
+
+                    cl18, cl19, cl20, cl21 = st.columns(4)
+                    with cl18:
+                        step5_dict["rpm"] = st.number_input("Rpm", min_value =500 , step=200)
+                    with cl19:
+                        step5_dict["aileron-trim"] = st.number_input("Aileron-trim",  value=0.00)
+                    with cl20:
+                        step5_dict["elevator-trim"] = st.number_input("Elevator-trim",  value=0.00)
+                    with cl21:
+                        step5_dict["rudder-trim"] = st.number_input("Rudder-Trim",  value= 0.00)
+
+                
+                if st.button(label='Generate aircraft-set.xml'):
+                    # XML dosyasını oluşturma ve kaydetme
+                    set_xml = gener.aircraft_set(step5_dict)
+
+                    # XML verisini dosya olarak kaydetme (geçici)
+                    tree = ET.ElementTree(set_xml)
+                    tree.write("aircraft-set.xml", xml_declaration=True, encoding='utf-8')
+
+                    # Kaydedilen XML dosyasını okumak ve hatasız olup olmadığını kontrol etmek
+                    try:
+                        tree = ET.parse("aircraft-set.xml")
+                        root = tree.getroot()
+                    except ET.ParseError as e:
+                        st.error(f"Error parsing XML file: {e}")
+                        return
+
+                    # XML verisini string olarak almak
+                    xml_data = ET.tostring(set_xml, encoding='utf-8', method='xml')
+
+                    # XML verisini indirilebilir hale getirmek için BytesIO ile akışa çevirme
+                    xml_bytes = BytesIO(xml_data)
+
+                    # XML verisini indirilebilir hale getir
+                    st.download_button(
+                        label="XML Dosyasını İndir",
+                        data=xml_bytes,
+                        file_name="mandalina.xml",
                         mime="application/xml"
                     )
+
+
 
 if __name__ == "__main__":
     # Eğer bu dosya direkt çalıştırılırsa aşağıdaki kod çalışır.
