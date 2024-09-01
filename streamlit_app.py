@@ -378,7 +378,88 @@ class generate:
         common_functions.indent(root)
         return root
         
- 
+    def thruster(self, step4_dict):
+        thruster = step4_dict["selected_thruster"] 
+        if thruster == "Direct":
+            # 'direct' elementi oluşturuluyor ve 'name' attribute'u ekleniyor
+            ET.Element('sense').text = "1"
+            direct_element = ET.Element('direct', name='direct')
+
+            # İçeriği ekleme (metin veya başka bir element)
+            direct_element.append(ET.Comment("There is no tag to add direct file."))
+
+            # Element ağacını oluşturma
+
+            return direct_element
+
+        elif thruster == "Nozzle":
+            rocket = ET.Element("nozzle", attrib={"name": f"{step4_dict['nozzle_name']}"})
+            ET.SubElement(rocket, "area", attrib = {"unit": f"{step4_dict['area_unit']}"}).text = str(step4_dict["area"])
+
+            common_functions.indent(rocket)
+            return rocket
+        
+        elif thruster == "Rotor":
+            ET.Element('sense').text = str()
+            rotor = ET.Element("rotor", attrib={"name": f"{step4_dict['name']}"})
+            ET.SubElement(rotor, "diameter", attrib={"unit": ""}).text = str(step4_dict["diameter"])
+            ET.SubElement(rotor, "numblades").text = str(step4_dict["numblades"])
+            ET.SubElement(rotor, "gearratio").text = str(step4_dict["gearratio"])
+            ET.SubElement(rotor, "nominalrpm").text = str(step4_dict["nominalrpm"])
+            ET.SubElement(rotor, "minrpm").text = str(step4_dict["minrpm"])
+            ET.SubElement(rotor, "maxrpm").text = str(step4_dict["maxrpm"])
+            ET.SubElement(rotor, "chord", attrib={"unit": ""}).text = str(step4_dict["chord"])
+            ET.SubElement(rotor, "liftcurveslope", attrib={"unit": ""}).text = str(step4_dict["liftcurveslope"])
+            ET.SubElement(rotor, "twist", attrib={"unit": ""}).text = str(step4_dict["twist"])
+            ET.SubElement(rotor, "hingeoffset", attrib={"unit": ""}).text = str(step4_dict["hingeoffset"])
+            ET.SubElement(rotor, "flappingmoment", attrib={"unit": ""}).text = str(step4_dict["flappingmoment"])
+            ET.SubElement(rotor, "massmoment", attrib={"Xunit": ""}).text = str(step4_dict["massmoment"])
+            ET.SubElement(rotor, "polarmoment", attrib={"unit": ""}).text = str(step4_dict["polarmoment"])
+            ET.SubElement(rotor, "inflowlag").text = str(step4_dict["inflowlag"])
+            ET.SubElement(rotor, "tiplossfactor").text = str(step4_dict["tiplossfactor"])
+            ET.SubElement(rotor, "maxbrakepower", attrib={"unit": ""}).text = str(step4_dict["maxbrakepower"])
+            ET.SubElement(rotor, "controlmap").text = str(step4_dict["controlmap"])
+            ET.SubElement(rotor, "ExternalRPM").text = str(step4_dict["externalrpm"])
+            ET.SubElement(rotor, "groundeffectexp").text = str(step4_dict["groundeffectshift"])
+            ET.SubElement(rotor, "groundeffectshift", attrib={"unit": ""}).text = str(step4_dict["groundeffectexp"])
+
+            common_functions.indent(rotor)
+            return rotor
+        
+        elif thruster == "Propeller":
+            ET.Element('sense').text = str(1)
+            propeller = ET.Element('propeller', attrib={"name":f'{step4_dict["propeller_name"]}'})
+            ET.SubElement(propeller , "ixx").text = str()
+            ET.SubElement(propeller , "diameter", attrib={"unit": "IN"}).text = str(step4_dict["diameter"])
+            ET.SubElement(propeller , "numblades").text = str(step4_dict["numblades"])
+            ET.SubElement(propeller , "gearratio").text = str(step4_dict["gearratio"])
+            ET.SubElement(propeller , "minpitch").text = str()
+            ET.SubElement(propeller , "maxpitch").text = str()
+            ET.SubElement(propeller , "minrpm").text = str(step4_dict["minrpm"])
+            ET.SubElement(propeller , "maxrpm").text = str(step4_dict["maxrpm"])
+            ET.SubElement(propeller , "constspeed").text = str(step4_dict["constspeed"])
+            ET.SubElement(propeller , "reversepitch").text = str(step4_dict["reversepitch"])
+            ET.SubElement(propeller , "ct_factor").text = str(step4_dict["ct_factor"])
+            ET.SubElement(propeller , "cp_factor").text = str(step4_dict["cp_factor"])
+            ET.SubElement(propeller , "c_tmach").text = str(step4_dict["c_tmach"])
+            ET.SubElement(propeller , "c_pmach").text = str(step4_dict["c_pmach"])
+
+            common_functions.indent(propeller)
+            return propeller
+
+           
+
+
+
+            return thruster
+
+    def model_aircraft(self, step7_dict):
+        model = ET.Element("models")
+
+        return model
+
+
+
 
 class Frontend:
     def __init__(self):
@@ -411,7 +492,10 @@ class Frontend:
         st.warning('Step 1de turboprop ve rocket seçeneklerini, step 5 ve step 7yi deneyebilirsiniz.', icon="⚠️")
 
         self.step1()
+        self.step2()
+        self.step4()
         self.step5()
+        self.step7()
 
         footer_col1, footer_col2 = st.columns(2)
         with footer_col1:
@@ -460,6 +544,153 @@ class Frontend:
                         data=xml_data,
                         file_name="my_engine.xml",
                         mime="application/xml")
+
+    def step2(self):
+        st.subheader("Step 2: The Prop configuration (if applicable)...", divider=True)
+        st.write("This step is to define the propeller configuration. The type of propeller used on the aircraft and its maximum RPM are configured in this step. This step is required when using a propeller-based engine configuration.")
+        with st.expander("**STEP :two:**"):
+            with st.container():
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    with st.container(border=True):        
+                        engine_power = st.text_input("Engine Power (per engine))", value="1000.0")
+                        eng_power_unit = st.radio("", ['horsepower', 'kw'], index=0)
+                with col2:
+                    with st.container(border=True):
+                        maximum_eng_rpm = st.text_input("Maximum Engine RPM", value="2700")
+                        pitch = st.radio("Pitch", ['fixed', 'variable'], index=0)
+                with col3:
+                    with st.container(border=True):
+                        propeller_diameter = st.text_input("Propeller Diameter", value="8")
+                        propeller_unit = st.radio("", ['feet', 'inches', 'meters'], index=0)
+
+                # Formu oluştur
+                if st.button("Generate 2"):
+                    st.write("Engine Name:", engine_power)
+                    st.write("Engine Type:", eng_power_unit)
+                    st.write(f"Engine Power or Thrust: {maximum_eng_rpm} {pitch}")
+                    st.write("Augmentation (afterburning) Installed?:", propeller_unit)
+                    st.write("Water Injection Installed?:", propeller_diameter)
+                    st.write("You are now ready to have Aeromatic generate your file. Aeromatic will create a file called `engine.php`, which is your engine configuration file. You will need to save this file with a filename of the form `engine_name.xml`.")         
+    
+    def step4(self):
+        st.subheader("Step 4: The Thruster Configuration", divider=True)
+        st.write("This step is to define the thruster configuration of the aircraft. If the aircraft has additional thruster systems, they are configured in this step. In this step, parameters such as thruster layout and power outputs are determined.") 
+        step4_dict = {}
+        with st.expander("**STEP :four:**"):
+            with st.container():
+                # Motor türleri
+                motor_types = ["Electric", "Piston", "Rocket", "Turbine", "TurboProp"]
+
+                # Thruster tiplerini motor türlerine göre eşleştirme
+                thruster_options = {
+                    "Electric": ["Direct", "Propeller", "Rotor"],
+                    "Piston": ["Propeller", 'Rotor'],
+                    "Rocket": ["Nozzle"],
+                    "Turbine": ["Direct"],
+                    "TurboProp": ["Propeller", 'Rotor']
+                }
+
+                # Motor türü seçimi
+                step4_dict["selected_motor"] = st.selectbox("Select Engine Type", motor_types)
+
+                # Seçilen motor türüne göre thruster tiplerini göster
+                if step4_dict["selected_motor"]:
+                    selected_thruster = st.selectbox("Select Thruster Type", thruster_options[step4_dict["selected_motor"]])
+                    step4_dict["selected_thruster"] = selected_thruster
+                    if selected_thruster == "Direct":
+                        st.text("No configuration required for direct thruster.")
+                        # XML dosyasını oluşturma ve kaydetme
+                    
+
+                    elif selected_thruster == "Nozzle":
+                        step4_dict["nozzle_name"] = st.text_input("Nozzle Name")
+                        step4_dict["area_unit"] = st.selectbox("Area Unit", ["FT2", "M2", "IN2"])
+                        step4_dict["area"] = st.number_input("Nozzle Area", min_value=0.0)
+                        #nozzle(nozzle_name, area_unit, area)
+
+                    elif selected_thruster == "Propeller":
+                        prop_col1, prop_col2, prop_col3 = st.columns(3)
+                        
+                        step4_dict["propeller_name"] = st.text_input("Propeller Name", "")
+                        with prop_col1:
+                            step4_dict["ixx"] = st.number_input("Rotational İnertia", min_value=0.0)
+                            step4_dict["diameter"] = st.number_input("Propeller disk diameter (IN)", min_value=0.0)
+                            step4_dict["numblades"] = st.number_input("Number of Blades", min_value=1, value=1)
+                            step4_dict["gearratio"] = st.number_input("Ratio of (engine rpm)/(prop rpm)", value=0.0)
+                        with prop_col2:    
+                            step4_dict["minpitch"] = st.number_input("Minimum Pitch", min_value=0.0)
+                            step4_dict["maxpitch"] = st.number_input("Maximum Pitch", min_value=0.0)
+                            step4_dict["minrpm"] = st.number_input("Minimum rpm target for constant speed propeller", value=1.0)
+                            step4_dict["maxrpm"] = st.number_input("Maximum rpm target for constant speed propeller", value=0.0)
+                        with prop_col3:
+                            step4_dict["reversepitch"] = st.number_input("Reverse Pitch", min_value=0.0)
+                            step4_dict["ixx_unit"] = st.selectbox("İnertia Unit", ["SLUG*FT2", "KG*M2"])
+                            step4_dict["constspeed"] = st.number_input("1 = constant speed mode, 0 = manual pitch mode", min_value=0, max_value=1)
+                            step4_dict["reversepitch"] = st.number_input("Blade pitch angle for reverse", min_value=0.0)
+                        
+                        prop1_col1, prop2_col2 = st.columns(2)
+                        with prop1_col1:
+                            step4_dict["ct_factor"] = st.text_area("A multiplier for the coefficients of thrust", value="0.0   0.0580\n0.1   0.0620\n0.2   0.0600\n0.3   0.0580\n0.4   0.0520\n0.5   0.0457\n0.6   0.0436\n0.8   0.0372\n0.9   0.0299\n1.0   0.0202\n1.2   0.0075\n1.3   0.0111\n1.4   0.0202\n1.5   0.0280\n1.6   0.0346\n1.7   0.0389\n1.8   0.0421\n1.9   0.0436")
+                            step4_dict["c_tmach"] = st.text_area("C_PMACH Tablosu", value="0.0   0.0580\n0.1   0.0620\n0.2   0.0600\n0.3   0.0580\n0.4   0.0520\n0.5   0.0457\n0.6   0.0436\n0.8   0.0372\n0.9   0.0299\n1.0   0.0202\n1.2   0.0075\n1.3   0.0111\n1.4   0.0202\n1.5   0.0280\n1.6   0.0346\n1.7   0.0389\n1.8   0.0421\n1.9   0.0436")
+                        with prop2_col2:
+                            step4_dict["cp_factor"] = st.text_area("A multiplier for the coefficients of power", value="0.0   0.0580\n0.1   0.0620\n0.2   0.0600\n0.3   0.0580\n0.4   0.0520\n0.5   0.0457\n0.6   0.0436\n0.8   0.0372\n0.9   0.0299\n1.0   0.0202\n1.2   0.0075\n1.3   0.0111\n1.4   0.0202\n1.5   0.0280\n1.6   0.0346\n1.7   0.0389\n1.8   0.0421\n1.9   0.0436")
+                            step4_dict["c_pmach"] = st.text_area("C_TMACH Tablosu", value="                     -10         0                15                 25            35            45            55        \n-0.2      -0.0734    0.0413    0.1503    0.1842    0.2030    0.2142    0.1974    \n0.0      -0.1090    0.0000    0.1503    0.1842    0.2030    0.2162    0.2021    \n0.2      -0.1222   -0.0376    0.1297    0.1804    0.2001    0.2162    0.2021    \n0.4      -0.1222   -0.0873    0.0977    0.1786    0.1963    0.2142    0.2021    \n0.6      -0.1222   -0.1222    0.0517    0.1607    0.1879    0.2087    0.1992    \n0.8      -0.1222   -0.1222    0.0029    0.1203    0.1824    0.2012    0.1992    \n1.0      -0.1222   -0.1222   -0.0489    0.0734    0.1748    0.1908    0.1974    \n1.2      -0.1222   -0.1222   -0.1006    0.0226    0.1437    0.1842    0.1974    \n1.4      -0.1222   -0.1222   -0.1222   -0.0329    0.1034    0.1813    0.1936    \n1.8      -0.1222   -0.1222   -0.1222   -0.1222    0.0095    0.1503    0.1842    \n2.0      -0.1222   -0.1222   -0.1222   -0.1222   -0.0376    0.1174    0.1834    \n3.0      -0.1222   -0.1222   -0.1222   -0.1222   -0.1222   -0.0734    0.0320    \n4.0      -0.1222   -0.1222   -0.1222   -0.1222   -0.1222   -0.1222   -0.1137   \n6.0      -0.1222   -0.1222   -0.1222   -0.1222   -0.1222   -0.1222   -0.1222   ")
+                        
+                            
+                    elif selected_thruster == "Rotor":
+                        rotor_col1, rotor_col2, rotor_col3 = st.columns(3)
+                        with rotor_col1:
+                            step4_dict["name"] = st.text_input("Rotor Name", "")
+                            step4_dict["diameter"] = st.number_input("Diameter (LENGTH)", value=0.0)
+                            step4_dict["numblades"] = st.number_input("Number of Blades", min_value=1, value=1)
+                            step4_dict["gearratio"] = st.number_input("Gear Ratio", value=0.0)
+                            step4_dict["nominalrpm"] = st.number_input("Nominal RPM", value=0.0)
+                            step4_dict["minrpm"] = st.number_input("Minimum RPM", value=1.0)
+                            step4_dict["maxrpm"] = st.number_input("Maximum RPM", value=0.0)
+                        with rotor_col2:
+                            step4_dict["chord"] = st.number_input("Chord (LENGTH)", value=0.0)
+                            step4_dict["liftcurveslope"] = st.number_input("Lift Curve Slope (1/RAD)", value=0.0)
+                            step4_dict["twist"] = st.number_input("Twist (ANGLE)", value=0.0)
+                            step4_dict["hingeoffset"] = st.number_input("Hinge Offset (LENGTH)", value=0.0)
+                            step4_dict["flappingmoment"] = st.number_input("Flapping Moment (MOMENT)", value=0.0)
+                            step4_dict["massmoment"] = st.number_input("Mass Moment (SLUG*FT)", value=0.0)
+                            step4_dict["polarmoment"] = st.number_input("Polar Moment (MOMENT)", value=0.0)
+                        with rotor_col3:    
+                            step4_dict["inflowlag"] = st.number_input("Inflow Lag (sec)", value=0.0)
+                            step4_dict["tiplossfactor"] = st.number_input("Tip Loss Factor", value=1.0)
+                            step4_dict["maxbrakepower"] = st.number_input("Max Brake Power (POWER)", value=0.0)
+                            step4_dict["controlmap"] = st.selectbox("Control Map", options=['MAIN', 'TAIL', 'TANDEM'])
+                            step4_dict["externalrpm"] = st.number_input("External RPM", value=0.0)
+                            step4_dict["groundeffectshift"] = st.number_input("Ground Effect Shift (LENGTH)", value=0.0)
+                            step4_dict["groundeffectexp"] = st.number_input("Ground Effect Exponent", value=0.0)
+        
+                    # Seçilen motor ve thruster türüne göre alınan verileri gösterebilirsiniz.
+                    if st.button(label='Generate thruster.xml'): 
+                        # XML dosyasını oluşturma ve kaydetme
+                        thruster_xml = gener.thruster(step4_dict)
+
+                        # XML verisini dosya olarak kaydetme (geçici)
+                        tree = ET.ElementTree(thruster_xml)
+                        tree.write("thruster.xml", xml_declaration=True, encoding='utf-8')
+
+                        # Kaydedilen XML dosyasını okumak ve hatasız olup olmadığını kontrol etmek
+                        tree = ET.parse("thruster.xml")
+                        root = tree.getroot()
+
+                        # XML verisini string olarak almak
+                        xml_data = ET.tostring(thruster_xml, encoding='utf-8', method='xml')
+
+                        # XML verisini indirilebilir hale getirmek için BytesIO ile akışa çevirme
+                        xml_bytes = BytesIO(xml_data)
+
+                        # XML verisini indirilebilir hale getir
+                        st.download_button(
+                            label="Download XML File",
+                            data=xml_bytes,
+                            file_name="thruster.xml",
+                            mime="application/xml"
+                        )
 
     def step5(self):
         st.subheader("Step 5: Root directory aircraft-set Configuration", divider=True)
@@ -567,6 +798,233 @@ class Frontend:
                         file_name="mandalina.xml",
                         mime="application/xml"
                     )
+
+    def step7(self):
+        st.subheader("Step 7: Models Directory Aircraft File Configuration", divider=True)
+        st.write("This step defines the configuration files located in the models directory of the aircraft. These files contain the physical model of the aircraft, its moving parts (ailerons, flaps, rudders, etc.) and other visual components. This step is used to configure the visual and physical representation of the aircraft.")
+        with st.expander("**STEP :seven:** | Models Directory Aircraft File Configuration"):
+            with st.container():
+                # Available aircraft parts
+                parts = ["Ailerons", "Elevator", "Rudder", "Flaps", "Landing Gear", "Canards", "Slats"]
+                path_name = st.text_input("**.AC File Path Name**", "aircraft.ac")
+                select_parts = st.multiselect("Which surfaces will you give movement/animation to?", parts)
+                total_data = {}
+                if st.button("Generate parts"):
+                    if "Ailerons" in select_parts:
+                                st.write("**Ailerons**")
+                                c1, c2, c3, c4, c5 = st.columns(5)
+                                with c1:
+                                    total_data['Aileron_type'] = st.selectbox("Type", ['rotate'])
+                                with c2: 
+                                    total_data['Aileron_object-name'] = st.text_input("Object file name", "left_canard.079")
+                                with c3: 
+                                    total_data['Aileron_property'] = st.text_input("Property", "controls/flight/aileron")
+                                with c4:
+                                    total_data['Aileron_factor'] = st.text_input("Factor", "20")
+                                with c5:
+                                    total_data['Aileron_offset-deg'] = st.text_input("Offset-Deg", "0")
+
+                                c1, c2, c3, c4, c5, c6 = st.columns(6)
+                                with c1:
+                                    total_data['Aileron_x1'] = st.number_input("Aileron _a value", value=0.0, step=0.01)
+                                with c2:
+                                    total_data['Aileron_y1'] = st.number_input("Aileron-a value", value=0.0, step=0.01)
+                                with c3:
+                                    total_data['Aileron_z'] = st.number_input("Aileron z1-a value", value=0.0, step=0.01)
+                                with c4:
+                                    total_data['Aileron_x2'] = st.number_input("Aileron x1_a value", value=0.0, step=0.01)
+                                with c5:
+                                    total_data['Aileron_y2'] = st.number_input("Aileron y1-a value", value=0.0, step=0.01)
+                                with c6:
+                                    total_data['Aileron_z2'] = st.number_input("Aileron z1-sa value", value=0.0, step=0.01)
+                
+                    if "Elevator" in select_parts:
+                                st.write("**Elevator**")
+                                c1, c2, c3, c4, c5 = st.columns(5)
+                                with c1:
+                                    total_data['Elevator_type'] = st.selectbox("Elevator Type", ['rotate'])
+                                with c2: 
+                                    total_data['Elevator_object-name'] = st.text_input("Elevator Object file name", "left_canard.079")
+                                with c3: 
+                                    total_data['Elevator_property'] = st.text_input("Elevator Property", "controls/flight/aileron")
+                                with c4:
+                                    total_data['Elevator_factor'] = st.text_input("Elevator Factor", "20")
+                                with c5:
+                                    total_data['Elevator_offset-deg'] = st.text_input("Elevator Offset-Deg", "0")
+
+
+                                c1, c2, c3, c4, c5, c6 = st.columns(6)
+                                with c1:
+                                    total_data['Elevator_x1'] = st.number_input("Elevator x1 value", value=0.0, step=0.01)
+                                with c2:
+                                    total_data['Elevator_y1'] = st.number_input("Elevator y1 value", value=0.0, step=0.01)
+                                with c3:
+                                    total_data['Elevator_z1'] = st.number_input("Elevator z1 value", value=0.0, step=0.01)
+                                with c4:
+                                    total_data['Elevator_x2'] = st.number_input("Elevator x2 value", value=0.0, step=0.01)
+                                with c5:
+                                    total_data['Elevator_y2'] = st.number_input("Elevator y2 value", value=0.0, step=0.01)
+                                with c6:
+                                    total_data['Elevator_z2'] = st.number_input("Elevator z2 value", value=0.0, step=0.01)
+
+                    if "Rudder" in select_parts:
+                                st.write("**Rudder**")
+                                c1, c2, c3, c4, c5 = st.columns(5)
+                                with c1:
+                                    total_data['Rudder_type'] = st.selectbox("Rudder Type", ['rotate'])
+                                with c2: 
+                                    total_data['Rudder_object-name'] = st.text_input("Rudder Object file name", "left_canard.079")
+                                with c3: 
+                                    total_data['Rudder_property'] = st.text_input("Rudder Property", "controls/flight/aileron")
+                                with c4:
+                                    total_data['Rudder_factor'] = st.text_input("Rudder Factor", "20")
+                                with c5:
+                                    total_data['Rudder_offset-deg'] = st.text_input("Rudder Offset-Deg", "0")
+
+
+                                c1, c2, c3, c4, c5, c6 = st.columns(6)
+                                with c1:
+                                    total_data['Rudder_x1'] = st.number_input("Rudder x1 value", value=0.0, step=0.01)
+                                with c2:
+                                    total_data['Rudder_y1'] = st.number_input("Rudder y1 value", value=0.0, step=0.01)
+                                with c3:
+                                    total_data['Rudder_z1'] = st.number_input("Rudder z1 value", value=0.0, step=0.01)
+                                with c4:
+                                    total_data['Rudder_x2'] = st.number_input("Rudder x2 value", value=0.0, step=0.01)
+                                with c5:
+                                    total_data['Rudder_y2'] = st.number_input("Rudder y2 value", value=0.0, step=0.01)
+                                with c6:
+                                    total_data['Rudder_z2'] = st.number_input("Rudder z2 value", value=0.0, step=0.01)
+
+                    if "Landing Gear" in select_parts:
+                                st.write("**Landing Gear**")
+                                c1, c2, c3, c4, c5 = st.columns(5)
+                                with c1:
+                                    total_data['Landing_Gear_type'] = st.selectbox("Landing Gear Type", ['rotate'])
+                                with c2: 
+                                    total_data['Landing_Gear_object-name'] = st.text_input("Landing Gear Object file name", "left_landing_gear.079")
+                                with c3: 
+                                    total_data['Landing_Gear_property'] = st.text_input("Landing Gear Property", "controls/flight/aileron")
+                                with c4:
+                                    total_data['Landing_Gear_factor'] = st.text_input("Landing Gear Factor", "20")
+                                with c5:
+                                    total_data['Landing_Gear_offset-deg'] = st.text_input("Landing Gear Offset-Deg", "0")
+
+                                c1, c2, c3, c4, c5, c6 = st.columns(6)
+                                with c1:
+                                    total_data['Landing_Gear_x1'] = st.number_input("Landing Gear x1 value", value=0.0, step=0.01)
+                                with c2:
+                                    total_data['Landing_Gear_y1'] = st.number_input("Landing Gear y1 value", value=0.0, step=0.01)
+                                with c3:
+                                    total_data['Landing_Gear_z1'] = st.number_input("Landing Gear z1 value", value=0.0, step=0.01)
+                                with c4:
+                                    total_data['Landing_Gear_x2'] = st.number_input("Landing Gear x2 value", value=0.0, step=0.01)
+                                with c5:
+                                    total_data['Landing_Gear_y2'] = st.number_input("Landing Gear y2 value", value=0.0, step=0.01)
+                                with c6:
+                                    total_data['Landing_Gear_z2'] = st.number_input("Landing Gear z2 value", value=0.0, step=0.01)
+
+
+                                c1, c2, c3, c4, c5, c6 = st.columns(6)
+                                with c1:
+                                    total_data['Landing_Gear_x1'] = st.number_input("Landing_Gear x1 value", value=0.0, step=0.01)
+                                with c2:
+                                    total_data['Landing_Gear_y1'] = st.number_input("Landing_Gear y1 value", value=0.0, step=0.01)
+                                with c3:
+                                    total_data['Landing_Gear_z1'] = st.number_input("Landing_Gear z1 value", value=0.0, step=0.01)
+                                with c4:
+                                    total_data['Rudder_x2'] = st.number_input("Landing_Gear x2 value", value=0.0, step=0.01)
+                                with c5:
+                                    total_data['Landing_Gear_y2'] = st.number_input("Landing_Gear y2 value", value=0.0, step=0.01)
+                                with c6:
+                                    total_data['Landing_Gear_z2'] = st.number_input("Landing_Gear z2 value", value=0.0, step=0.01)
+
+                    if "Canards" in select_parts:
+                                st.write("**Canards**")
+                                c1, c2, c3, c4, c5 = st.columns(5)
+                                with c1:
+                                    total_data['Canards_type'] = st.selectbox("Canards Type", ['rotate'])
+                                with c2: 
+                                    total_data['Canards_object-name'] = st.text_input("Canards Object file name", "left_canard.079")
+                                with c3: 
+                                    total_data['Canards_property'] = st.text_input("Canards Property", "controls/flight/aileron")
+                                with c4:
+                                    total_data['Canards_factor'] = st.text_input("Canards Factor", "20")
+                                with c5:
+                                    total_data['Canards_offset-deg'] = st.text_input("Canards Offset-Deg", "0")
+
+                                c1, c2, c3, c4, c5, c6 = st.columns(6)
+                                with c1:
+                                    total_data['Canards_x1'] = st.number_input("Canards x1 value", value=0.0, step=0.01)
+                                with c2:
+                                    total_data['Canards_y1'] = st.number_input("Canards y1 value", value=0.0, step=0.01)
+                                with c3:
+                                    total_data['Canards_z1'] = st.number_input("Canards z1 value", value=0.0, step=0.01)
+                                with c4:
+                                    total_data['Canards_x2'] = st.number_input("Canards x2 value", value=0.0, step=0.01)
+                                with c5:
+                                    total_data['Canards_y2'] = st.number_input("Canards y2 value", value=0.0, step=0.01)
+                                with c6:
+                                    total_data['Canards_z2'] = st.number_input("Canards z2 value", value=0.0, step=0.01)
+
+                    if "Flaps" in select_parts:
+                                st.write("**Flaps**")
+                                c1, c2, c3, c4, c5 = st.columns(5)
+                                with c1:
+                                    total_data['Flaps_type'] = st.selectbox("Flaps Type", ['rotate'])
+                                with c2: 
+                                    total_data['Flaps_object-name'] = st.text_input("Flaps Object file name", "left_canard.079")
+                                with c3: 
+                                    total_data['Flaps_property'] = st.text_input("Flaps Property", "controls/flight/aileron")
+                                with c4:
+                                    total_data['Flaps_factor'] = st.text_input("Flaps Factor", "20")
+                                with c5:
+                                    total_data['Flaps_offset-deg'] = st.text_input("Flaps Offset-Deg", "0")
+
+
+                                c1, c2, c3, c4, c5, c6 = st.columns(6)
+                                with c1:
+                                    total_data['Flaps_x1'] = st.number_input("Flaps x1 value", value=0.0, step=0.01)
+                                with c2:
+                                    total_data['Flaps_y1'] = st.number_input("Flaps y1 value", value=0.0, step=0.01)
+                                with c3:
+                                    total_data['Flaps_z1'] = st.number_input("Flaps z1 value", value=0.0, step=0.01)
+                                with c4:
+                                    total_data['Flaps_x2'] = st.number_input("Flaps x2 value", value=0.0, step=0.01)
+                                with c5:
+                                    total_data['Flaps_y2'] = st.number_input("Flaps y2 value", value=0.0, step=0.01)
+                                with c6:
+                                    total_data['Flaps_z2'] = st.number_input("Flaps z2 value", value=0.0, step=0.01)
+
+                    if st.button("XML BUTTON"):
+                        # XML dosyasını oluşturma ve kaydetme
+                        model_xml = gener.model_aircraft(total_data)
+
+                        # XML verisini dosya olarak kaydetme (geçici)
+                        tree = ET.ElementTree(model_xml)
+                        tree.write("models.xml", xml_declaration=True, encoding='utf-8')
+
+                        # Kaydedilen XML dosyasını okumak ve hatasız olup olmadığını kontrol etmek
+                        try:
+                            tree = ET.parse("aircraft-set.xml")
+                            root = tree.getroot()
+                        except ET.ParseError as e:
+                            st.error(f"Error parsing XML file: {e}")
+                            return
+
+                        # XML verisini string olarak almak
+                        xml_data = ET.tostring(model_xml, encoding='utf-8', method='xml')
+
+                        # XML verisini indirilebilir hale getirmek için BytesIO ile akışa çevirme
+                        xml_bytes = BytesIO(xml_data)
+
+                        # XML verisini indirilebilir hale getir
+                        st.download_button(
+                            label="Models XML Dosyasını İndir",
+                            data=xml_bytes,
+                            file_name="zircraft.xml",
+                            mime="application/xml"
+                        )
 
 
 
