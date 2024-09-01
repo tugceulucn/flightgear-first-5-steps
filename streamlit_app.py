@@ -3,9 +3,12 @@ import pandas as pd
 import xml.etree.ElementTree as ET
 from math import pow, floor
 from io import BytesIO
-
+import zipfile
+import os
+import io
 
 version = 1.0
+
 
 class common_functions:
     def __init__(self):
@@ -67,6 +70,7 @@ class common_functions:
     def read_xml(file_path):
         with open(file_path, 'r', encoding='utf-8') as file:
             return file.read()
+    
 
 class generate:
     def __init__(self):
@@ -354,7 +358,8 @@ class generate:
         lenght_fuel = (len(fuel_dict))
 
         j = 0
-        for i in range (lenght_fuel):
+        i = 0
+        for i in range (lenght_fuel-1):
             tank = ET.SubElement(fuel, "tank", attrib={"n": f"{i}"})
             ET.SubElement(tank, "name").text = str(fuel_dict[i][j+1])
             ET.SubElement(tank, "capacity", attrib={"unit": "LBS"}).text = str(fuel_dict[i][j+2])
@@ -453,10 +458,126 @@ class generate:
 
             return thruster
 
-    def model_aircraft(self, step7_dict):
-        model = ET.Element("models")
+    def model_aircraft(self, step7_dict, name):
+        model = ET.Element("PropertyList")
+        ET.SubElement(model, "path").text = str(name) 
+        i = 0
+        j = 11
+        items_list = list(step7_dict.items())
+
+        while j+1 != len(step7_dict):
+            animation = ET.SubElement(model, "animation")
+            ET.SubElement(animation, "type").text = str(items_list[i][1])
+            ET.SubElement(animation, "object-name").text = str(items_list[i+1][1])
+            ET.SubElement(animation, "property").text = str(items_list[i+2][1])
+            ET.SubElement(animation, "factor").text = str(items_list[i+3][1])
+            ET.SubElement(animation, "offset-deg").text = str(items_list[i+4][1])
+            axis = ET.SubElement(animation, "axis")
+            ET.SubElement(axis, "x1-m").text = str(items_list[i+5][1])
+            ET.SubElement(axis, "y1-m").text = str(items_list[i+6][1])
+            ET.SubElement(axis, "z1-m").text = str(items_list[i+7][1])
+            ET.SubElement(axis, "x2-m").text = str(items_list[i+8][1])
+            ET.SubElement(axis, "y2-m").text = str(items_list[i+9][1])
+            ET.SubElement(axis, "z2-m").text = str(items_list[i+10][1])
+
+
+            
+
+            i = j
+            j = j+11
+            if i == len(step7_dict):
+                break
+            
+
+        common_functions.indent(model)
+           
 
         return model
+        
+    def aircraft(self, set6_dict):
+        # XML kök elemanı ve nitelikler
+        fdm_config = ET.Element(
+            'fdm_config', 
+            attrib={
+                'name': 'rascal',
+                'version': '2.0',
+                'release': 'BETA',
+                'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+                'xsi:noNamespaceSchemaLocation': 'http://jsbsim.sourceforge.net/JSBSim.xsd'
+            }
+        )
+        tree = ET.ElementTree(fdm_config)
+
+        # XML'e başa <?xml-stylesheet ... ?> eklemek için
+        ET.SubElement(fdm_config, '?xml-stylesheet', {
+            'href': 'http://jsbsim.sourceforge.net/JSBSim.xsl',
+            'type': 'text/xsl'
+        })
+
+        #Fileheader
+        fileheader = ET.SubElement(tree, "fileheader")
+        ET.SubElement(fileheader, "author").text = "Stall regime"
+        ET.SubElement(fileheader, "filecreationdate").text = str("20.06.2024")
+        ET.SubElement(fileheader, "version").text = str(version)
+        ET.SubElement(fileheader, "version").text = str("description")
+        #hysteresis_limits
+        hysteresis_limits = ET.SubElement(tree, "hysteresis_limits")
+        ET.SubElement(hysteresis_limits, "description").text = "Stall regime"
+        ET.SubElement(hysteresis_limits, "min").text = "27"
+        ET.SubElement(hysteresis_limits, "max").text = "34"
+        #metrics
+        metrics = ET.SubElement(tree, "metrics")
+        ET.SubElement(metrics, "wingarea", attrib={"unit": "M2"}).text = "27"
+        ET.SubElement(metrics, "wingspan", attrib={"unit": "M"}).text = "27"
+        ET.SubElement(metrics, "chord", attrib={"unit": "M"}).text = "27"
+        ET.SubElement(metrics, "htailarea", attrib={"unit": "M2"}).text = "27"
+        ET.SubElement(metrics, "htailarm", attrib={"unit": "M"}).text = "27"
+        ET.SubElement(metrics, "vtailarea", attrib={"unit": "M2"}).text = "27"
+        ET.SubElement(metrics, "vtailarm", attrib={"unit": "M"}).text = "27"
+
+        location = ET.SubElement(metrics, "location", attrib={"name": "AERORP", "unit": "M"})
+        ET.SubElement(location, "x").text = "0"
+        ET.SubElement(location, "y").text = "0"
+        ET.SubElement(location, "z").text = "0"
+
+        location2 = ET.SubElement(metrics, "location", attrib={"name": "EYEPOINT", "unit": "M"})
+        ET.SubElement(location2, "x").text = "0"
+        ET.SubElement(location2, "y").text = "0"
+        ET.SubElement(location2, "z").text = "0"
+
+        location3 = ET.SubElement(metrics, "location", attrib={"name": "EYEPOINT", "unit": "M"})
+        ET.SubElement(location3, "x").text = "0"
+        ET.SubElement(location3, "y").text = "0"
+        ET.SubElement(location3, "z").text = "0"
+        #mass_balance
+        mass_balance = ET.SubElement(tree, "mass_balance")
+        ET.SubElement(mass_balance, "ixx", attrib={"unit": "KG*M2"}).text = "0"
+        ET.SubElement(mass_balance, "iyy", attrib={"unit": "KG*M2"}).text = "0"
+        ET.SubElement(mass_balance, "izz", attrib={"unit": "KG*M2"}).text = "0"
+        ET.SubElement(mass_balance, "ixy", attrib={"unit": "KG*M2"}).text = "0"
+        ET.SubElement(mass_balance, "ixz", attrib={"unit": "KG*M2"}).text = "0"
+        ET.SubElement(mass_balance, "iyz", attrib={"unit": "KG*M2"}).text = "0"
+        ET.SubElement(mass_balance, "emptywt", attrib={"unit": "KG"}).text = "0"
+
+        location4 = ET.SubElement(metrics, "location", attrib={"name": "CG", "unit": "M"})
+        ET.SubElement(location4, "x").text = "0"
+        ET.SubElement(location4, "y").text = "0"
+        ET.SubElement(location4, "z").text = "0"
+        
+        #ground_reactions
+        ground_reactions = ET.SubElement(tree, "ground_reactions")
+        
+        #engines
+        engines = ET.SubElement(tree, "engines")
+        for i in range(int("2")):
+            engine = ET.SubElement(location4, "engine", attrib={"n": f"{i}"})
+            ET.SubElement(engine, "running").text = "true"
+            ET.SubElement(engine, "PB").text = "0" #Park Brake
+
+
+        propulsion = ET.SubElement(tree, "propulsion")
+        flight_control = ET.SubElement(tree, "flight_control")
+        aerodynamics = ET.SubElement(tree, "aerodynamics")
 
 
 
@@ -468,7 +589,7 @@ class Frontend:
         with c:
             logo = st.image("images/logo.png", width=100)
         with cc:
-            st.title("First 7 Steps to Add Your Own Aircraft to Flightgear")
+            st.title("First 5 Steps to Add Your Own Aircraft to Flightgear")
 
         #st.subheader("What is ",divider=True)
         st.write("FlightGear is a free and open source flight simulation software. Started in 1997, this project provides a platform to which anyone with an interest in flight simulations can contribute. FlightGear can simulate a wide variety of airplanes, airports and flight conditions, so it is used by both flight enthusiasts and professionals for training and entertainment purposes. During the installation phase, you can download the software from the official website and install it on your computer. On the start screen, you can adjust settings such as aircraft selection, airport selection and flight parameters. The flight simulation starts in a realistic cockpit environment and you can manage the aircraft using control systems from real airplanes. FlightGear is extensible, so you can download and add new aircraft models developed by the community. To import aircraft, simply place the downloaded aircraft files into FlightGear's **Aircraft** folder. FlightGear is characterized by realistic flight dynamics, modular structure, extensive scenery options and multiplayer mode. These features allow users to improve their flying skills, experience different airplanes, and create their own simulation content.")
@@ -493,10 +614,34 @@ class Frontend:
 
         self.step1()
         self.step2()
+        self.step3()
         self.step4()
         self.step5()
-        self.step7()
 
+        st.write("If you want, you can download your file in zip format ready to directly integrate.\n1. Enter the requested information in the above form.\n2. Upload your 3D model file with 2nd extension.\nThen you can download the file.")
+        uploaded_file = st.file_uploader("Choose a AC file", accept_multiple_files=False)
+        if uploaded_file is not None:
+            st.success('You uploaded AC file successfully! Now download your aircraft file.', icon="✅")
+            # Bellekte bir dosya oluştur (io.BytesIO)
+            buffer = io.BytesIO()
+
+
+            # ZIP dosyasını bellekte oluşturun
+            with zipfile.ZipFile(buffer, 'w') as zipf:
+                # Dosya ve klasörleri ekleyin
+                zipf.writestr('yourAircraft/', '')  # Boş klasör ekleme
+                zipf.writestr('yourAircraft/Engines/', "")  # Klasördeki dosya ekleme
+                zipf.writestr('yourAircraft/Models/', '')  # Alt klasör ekleme
+
+            # Bellekteki ZIP dosyasını indirme butonuna bağla
+            st.download_button(
+                label="Download",
+                data=buffer.getvalue(),
+                file_name="your_aircraft.zip",
+                mime="application/zip"
+            )
+                
+            
         footer_col1, footer_col2 = st.columns(2)
         with footer_col1:
             st.write("You've managed to transfer your airplane to FlightGear for the first stage. Now you are on your own! You can add realism to your simulation by adding sound effects and visual customization with various aircraft liveries. The electronics and cockpit enhance the functionality of your aircraft, while thumbnails and previews enhance the visual presentation. GUI information messages and checklists will improve the user experience, while a separate menu will make your simulation more accessible. You can use FlightGear's original site for these steps. Good luck!")
@@ -545,39 +690,30 @@ class Frontend:
                         file_name="my_engine.xml",
                         mime="application/xml")
 
-    def step2(self):
-        st.subheader("Step 2: The Prop configuration (if applicable)...", divider=True)
-        st.write("This step is to define the propeller configuration. The type of propeller used on the aircraft and its maximum RPM are configured in this step. This step is required when using a propeller-based engine configuration.")
-        with st.expander("**STEP :two:**"):
-            with st.container():
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    with st.container(border=True):        
-                        engine_power = st.text_input("Engine Power (per engine))", value="1000.0")
-                        eng_power_unit = st.radio("", ['horsepower', 'kw'], index=0)
-                with col2:
-                    with st.container(border=True):
-                        maximum_eng_rpm = st.text_input("Maximum Engine RPM", value="2700")
-                        pitch = st.radio("Pitch", ['fixed', 'variable'], index=0)
-                with col3:
-                    with st.container(border=True):
-                        propeller_diameter = st.text_input("Propeller Diameter", value="8")
-                        propeller_unit = st.radio("", ['feet', 'inches', 'meters'], index=0)
+    #def step2(self):
+        #st.subheader("Step 2: The Prop configuration (if applicable)...", divider=True)
+        #st.write("This step is to define the propeller configuration. The type of propeller used on the aircraft and its maximum RPM are configured in this step. This step is required when using a propeller-based engine configuration.")
+        #with st.expander("**STEP :two:**"):
+            #with st.container():
+                #col1, col2, col3 = st.columns(3)
+                #with col1:
+                    #with st.container(border=True):        
+                        #engine_power = st.text_input("Engine Power (per engine))", value="1000.0")
+                        #eng_power_unit = st.radio("", ['horsepower', 'kw'], index=0)
+                #with col2:
+                    #with st.container(border=True):
+                        #maximum_eng_rpm = st.text_input("Maximum Engine RPM", value="2700")
+                        #pitch = st.radio("Pitch", ['fixed', 'variable'], index=0)
+                #with col3:
+                    #with st.container(border=True):
+                        #propeller_diameter = st.text_input("Propeller Diameter", value="8")
+                        #propeller_unit = st.radio("", ['feet', 'inches', 'meters'], index=0)
 
-                # Formu oluştur
-                if st.button("Generate 2"):
-                    st.write("Engine Name:", engine_power)
-                    st.write("Engine Type:", eng_power_unit)
-                    st.write(f"Engine Power or Thrust: {maximum_eng_rpm} {pitch}")
-                    st.write("Augmentation (afterburning) Installed?:", propeller_unit)
-                    st.write("Water Injection Installed?:", propeller_diameter)
-                    st.write("You are now ready to have Aeromatic generate your file. Aeromatic will create a file called `engine.php`, which is your engine configuration file. You will need to save this file with a filename of the form `engine_name.xml`.")         
-    
-    def step4(self):
-        st.subheader("Step 4: The Thruster Configuration", divider=True)
+    def step2(self):
+        st.subheader("Step 2: The Thruster Configuration", divider=True)
         st.write("This step is to define the thruster configuration of the aircraft. If the aircraft has additional thruster systems, they are configured in this step. In this step, parameters such as thruster layout and power outputs are determined.") 
         step4_dict = {}
-        with st.expander("**STEP :four:**"):
+        with st.expander("**STEP :two:**"):
             with st.container():
                 # Motor türleri
                 motor_types = ["Electric", "Piston", "Rocket", "Turbine", "TurboProp"]
@@ -669,37 +805,28 @@ class Frontend:
                     if st.button(label='Generate thruster.xml'): 
                         # XML dosyasını oluşturma ve kaydetme
                         thruster_xml = gener.thruster(step4_dict)
+                        common_functions.save_xml(thruster_xml, "thruster.xml")
 
-                        # XML verisini dosya olarak kaydetme (geçici)
-                        tree = ET.ElementTree(thruster_xml)
-                        tree.write("thruster.xml", xml_declaration=True, encoding='utf-8')
+                        xml_data = common_functions.read_xml("thruster.xml")
+                        st.code(xml_data, language="python", line_numbers=False)
 
-                        # Kaydedilen XML dosyasını okumak ve hatasız olup olmadığını kontrol etmek
-                        tree = ET.parse("thruster.xml")
-                        root = tree.getroot()
-
-                        # XML verisini string olarak almak
-                        xml_data = ET.tostring(thruster_xml, encoding='utf-8', method='xml')
-
-                        # XML verisini indirilebilir hale getirmek için BytesIO ile akışa çevirme
-                        xml_bytes = BytesIO(xml_data)
-
-                        # XML verisini indirilebilir hale getir
                         st.download_button(
-                            label="Download XML File",
-                            data=xml_bytes,
-                            file_name="thruster.xml",
-                            mime="application/xml"
-                        )
+                            label="Download my_engine.xml",
+                            data=xml_data,
+                            file_name="my_engine.xml",
+                            mime="application/xml")
 
-    def step5(self):
-        st.subheader("Step 5: Root directory aircraft-set Configuration", divider=True)
+    def step3(self):
+        pass
+
+    def step4(self):
+        st.subheader("Step 4: Root directory aircraft-set Configuration", divider=True)
         #view, consumables, engines controls fdm eksik.
         st.write("This step defines the aircraft-set configuration file located in the root directory of the aircraft. This file contains the general description of the aircraft, its version, sound and panel settings. Also, details such as the fuel tanks used for the aircraft, model path and preview images are defined in this step.")
         
         step5_dict = {}  # Create an empty dictionary
 
-        with st.expander("**STEP :five:** | Root directory aircraft-set Configuration "):
+        with st.expander("**STEP :four:** | Root directory aircraft-set Configuration "):
             with st.container():
                 with st.container(border=True):
                         cl1, cl2, cl3 = st.columns(3)
@@ -773,44 +900,29 @@ class Frontend:
                     # XML dosyasını oluşturma ve kaydetme
                     set_xml = gener.aircraft_set(step5_dict)
 
-                    # XML verisini dosya olarak kaydetme (geçici)
-                    tree = ET.ElementTree(set_xml)
-                    tree.write("aircraft-set.xml", xml_declaration=True, encoding='utf-8')
+                    common_functions.save_xml(set_xml, "aircraft-set.xml")
 
-                    # Kaydedilen XML dosyasını okumak ve hatasız olup olmadığını kontrol etmek
-                    try:
-                        tree = ET.parse("aircraft-set.xml")
-                        root = tree.getroot()
-                    except ET.ParseError as e:
-                        st.error(f"Error parsing XML file: {e}")
-                        return
+                    xml_data = common_functions.read_xml("aircraft-set.xml")
+                    st.code(xml_data, language="python", line_numbers=False)
 
-                    # XML verisini string olarak almak
-                    xml_data = ET.tostring(set_xml, encoding='utf-8', method='xml')
-
-                    # XML verisini indirilebilir hale getirmek için BytesIO ile akışa çevirme
-                    xml_bytes = BytesIO(xml_data)
-
-                    # XML verisini indirilebilir hale getir
                     st.download_button(
-                        label="XML Dosyasını İndir",
-                        data=xml_bytes,
-                        file_name="mandalina.xml",
-                        mime="application/xml"
-                    )
+                        label="Download aircraft-set.xml",
+                        data=xml_data,
+                        file_name="aircraft-set.xml",
+                        mime="application/xml")
 
-    def step7(self):
-        st.subheader("Step 7: Models Directory Aircraft File Configuration", divider=True)
+    def step5(self):
+        st.subheader("Step 5: Models Directory Aircraft File Configuration", divider=True)
         st.write("This step defines the configuration files located in the models directory of the aircraft. These files contain the physical model of the aircraft, its moving parts (ailerons, flaps, rudders, etc.) and other visual components. This step is used to configure the visual and physical representation of the aircraft.")
-        with st.expander("**STEP :seven:** | Models Directory Aircraft File Configuration"):
+        with st.expander("**STEP :five:** | Models Directory Aircraft File Configuration"):
             with st.container():
                 # Available aircraft parts
-                parts = ["Ailerons", "Elevator", "Rudder", "Flaps", "Landing Gear", "Canards", "Slats"]
+                parts = ["Ailerons", "Elevator", "Rudder", "Flaps", "Landing Gear", "Canards"]
                 path_name = st.text_input("**.AC File Path Name**", "aircraft.ac")
                 select_parts = st.multiselect("Which surfaces will you give movement/animation to?", parts)
                 total_data = {}
-                if st.button("Generate parts"):
-                    if "Ailerons" in select_parts:
+                
+                if "Ailerons" in select_parts:
                                 st.write("**Ailerons**")
                                 c1, c2, c3, c4, c5 = st.columns(5)
                                 with c1:
@@ -826,19 +938,19 @@ class Frontend:
 
                                 c1, c2, c3, c4, c5, c6 = st.columns(6)
                                 with c1:
-                                    total_data['Aileron_x1'] = st.number_input("Aileron _a value", value=0.0, step=0.01)
+                                    total_data['Aileron_x1'] = st.number_input("Aileron _a value", value=0.0, step=0.01, key='aileron_x1')
                                 with c2:
-                                    total_data['Aileron_y1'] = st.number_input("Aileron-a value", value=0.0, step=0.01)
+                                    total_data['Aileron_y1'] = st.number_input("Aileron-a value", value=0.0, step=0.01, key='aileron_y1')
                                 with c3:
-                                    total_data['Aileron_z'] = st.number_input("Aileron z1-a value", value=0.0, step=0.01)
+                                    total_data['Aileron_z'] = st.number_input("Aileron z1-a value", value=0.0, step=0.01, key='aileron_z')
                                 with c4:
-                                    total_data['Aileron_x2'] = st.number_input("Aileron x1_a value", value=0.0, step=0.01)
+                                    total_data['Aileron_x2'] = st.number_input("Aileron x1_a value", value=0.0, step=0.01, key='aileron_x2')
                                 with c5:
-                                    total_data['Aileron_y2'] = st.number_input("Aileron y1-a value", value=0.0, step=0.01)
+                                    total_data['Aileron_y2'] = st.number_input("Aileron y1-a value", value=0.0, step=0.01, key='aileron_y2')
                                 with c6:
-                                    total_data['Aileron_z2'] = st.number_input("Aileron z1-sa value", value=0.0, step=0.01)
+                                    total_data['Aileron_z2'] = st.number_input("Aileron z1-sa value", value=0.0, step=0.01, key='aileron_z2')
                 
-                    if "Elevator" in select_parts:
+                if "Elevator" in select_parts:
                                 st.write("**Elevator**")
                                 c1, c2, c3, c4, c5 = st.columns(5)
                                 with c1:
@@ -867,7 +979,7 @@ class Frontend:
                                 with c6:
                                     total_data['Elevator_z2'] = st.number_input("Elevator z2 value", value=0.0, step=0.01)
 
-                    if "Rudder" in select_parts:
+                if "Rudder" in select_parts:
                                 st.write("**Rudder**")
                                 c1, c2, c3, c4, c5 = st.columns(5)
                                 with c1:
@@ -896,7 +1008,7 @@ class Frontend:
                                 with c6:
                                     total_data['Rudder_z2'] = st.number_input("Rudder z2 value", value=0.0, step=0.01)
 
-                    if "Landing Gear" in select_parts:
+                if "Landing Gear" in select_parts:
                                 st.write("**Landing Gear**")
                                 c1, c2, c3, c4, c5 = st.columns(5)
                                 with c1:
@@ -939,7 +1051,7 @@ class Frontend:
                                 with c6:
                                     total_data['Landing_Gear_z2'] = st.number_input("Landing_Gear z2 value", value=0.0, step=0.01)
 
-                    if "Canards" in select_parts:
+                if "Canards" in select_parts:
                                 st.write("**Canards**")
                                 c1, c2, c3, c4, c5 = st.columns(5)
                                 with c1:
@@ -967,7 +1079,7 @@ class Frontend:
                                 with c6:
                                     total_data['Canards_z2'] = st.number_input("Canards z2 value", value=0.0, step=0.01)
 
-                    if "Flaps" in select_parts:
+                if "Flaps" in select_parts:
                                 st.write("**Flaps**")
                                 c1, c2, c3, c4, c5 = st.columns(5)
                                 with c1:
@@ -996,35 +1108,23 @@ class Frontend:
                                 with c6:
                                     total_data['Flaps_z2'] = st.number_input("Flaps z2 value", value=0.0, step=0.01)
 
-                    if st.button("XML BUTTON"):
-                        # XML dosyasını oluşturma ve kaydetme
-                        model_xml = gener.model_aircraft(total_data)
+                    
+                    # XML dosyasını oluşturma ve kaydetme
+                
+                # Seçilen motor ve thruster türüne göre alınan verileri gösterebilirsiniz.
+                if st.button(label='Generate models file.xml'): 
+                    model_xml = gener.model_aircraft(total_data, path_name)
 
-                        # XML verisini dosya olarak kaydetme (geçici)
-                        tree = ET.ElementTree(model_xml)
-                        tree.write("models.xml", xml_declaration=True, encoding='utf-8')
+                    common_functions.save_xml(model_xml, "models.xml")
 
-                        # Kaydedilen XML dosyasını okumak ve hatasız olup olmadığını kontrol etmek
-                        try:
-                            tree = ET.parse("aircraft-set.xml")
-                            root = tree.getroot()
-                        except ET.ParseError as e:
-                            st.error(f"Error parsing XML file: {e}")
-                            return
+                    xml_data = common_functions.read_xml("models.xml")
+                    st.code(xml_data, language="python", line_numbers=False)
 
-                        # XML verisini string olarak almak
-                        xml_data = ET.tostring(model_xml, encoding='utf-8', method='xml')
-
-                        # XML verisini indirilebilir hale getirmek için BytesIO ile akışa çevirme
-                        xml_bytes = BytesIO(xml_data)
-
-                        # XML verisini indirilebilir hale getir
-                        st.download_button(
-                            label="Models XML Dosyasını İndir",
-                            data=xml_bytes,
-                            file_name="zircraft.xml",
-                            mime="application/xml"
-                        )
+                    st.download_button(
+                        label="Download aircraft-model.xml",
+                        data=xml_data,
+                        file_name="models.xml",
+                        mime="application/xml")
 
 
 
